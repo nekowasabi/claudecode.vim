@@ -8,11 +8,11 @@ claudecode.vim integrates Claude Code CLI with Vim/Neovim through denops, provid
 
 ## Features
 
-- **Claude Codeとの連携**: Vim/Neovimから直接Claude Codeコマンドを実行
-- **ファイルコンテキスト管理**: 現在のファイルや複数のファイルをClaude Codeのコンテキストに追加
-- **ビジュアル選択のサポート**: 選択したテキストをプロンプトとしてClaude Codeに送信
-- **フローティングウィンドウインターフェース**: 対話操作のためのカスタマイズ可能なフローティングウィンドウ
-- **クロスプラットフォーム対応**: denopsとClaude Codeがサポートするすべてのプラットフォームで動作
+- **Claude Code Integration**: Execute Claude Code commands directly from Vim/Neovim
+- **File Context Management**: Add current file or multiple files to Claude Code context
+- **Visual Selection Support**: Send selected text as prompts to Claude Code
+- **Floating Window Interface**: Customizable floating windows for interactive operations
+- **Cross-Platform Support**: Works on all platforms supported by denops and Claude Code
 
 ## Prerequisites
 
