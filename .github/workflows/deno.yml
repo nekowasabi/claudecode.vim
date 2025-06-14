@@ -85,7 +85,7 @@ jobs:
             - name: Perform pre-cache
               run: |
                   deno cache $"($env.DENOPS_TEST_DENOPS_PATH)/denops/@denops-private/mod.ts"
-                  deno cache ./denops/aider/main.ts
+                  deno cache ./denops/claudecode/main.ts
 
             - name: Run tests
               run: deno test -A

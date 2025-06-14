@@ -51,7 +51,7 @@ async function sendPrompt(
 ): Promise<undefined> {
   const promptLines = prompt.split("\n");
   const joined = promptLines.join("\x1b\x0d"); // use Esc + Ctrl-M instead of \n to avoid submit
-  await denops.call("chansend", jobId, `${joined}\n`);
+  await denops.call("chansend", jobId, `${joined}\x0d`);
 }
 
 async function exit(

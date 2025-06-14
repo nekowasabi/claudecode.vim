@@ -227,12 +227,10 @@ export async function main(denops: Denops): Promise<void> {
       console.log(`Added ${currentFile} to Claude Code read-only`);
     }),
 
-
     await command("paste", "0", async () => {
       const prompt = "/paste";
       await buffer.sendPrompt(denops, prompt);
     }),
-
 
     await command(
       "ask",
@@ -280,7 +278,6 @@ export async function main(denops: Denops): Promise<void> {
       },
       { pattern: "[<line1>, <line2>]", range: true },
     ),
-
 
     /**
      * コードレビューコマンドを実行する
