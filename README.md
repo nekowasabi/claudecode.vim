@@ -13,14 +13,15 @@ claudecode.vim integrates Claude Code CLI with Vim/Neovim through denops, provid
 - **Visual Selection Support**: Send selected text as prompts to Claude Code
 - **Floating Window Interface**: Customizable floating windows for interactive operations
 - **Cross-Platform Support**: Works on all platforms supported by denops and Claude Code
-- **Vim/Neovim Compatibility**: Supports both Vim 8.1+ and Neovim
+- **Vim/Neovim Compatibility**: Supports both Vim 8.1+ and Neovim with automatic editor detection
+- **Automatic Editor Detection**: Seamless compatibility layer adapts behavior for each editor
 
 ## Prerequisites
 
 - [denops.vim](https://github.com/vim-denops/denops.vim) - Required for plugin functionality
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) - Must be installed and accessible in PATH
 - Deno runtime - Required by denops
-- Vim 8.1+ with terminal support OR Neovim
+- Vim 8.1+ with terminal support OR Neovim (Vim 8.2+ recommended for full feature support)
 
 ## Installation
 
@@ -195,10 +196,24 @@ If Claude Code buffer doesn't appear:
 - Note: Floating windows require Neovim or Vim 8.2+ with popup support
 
 ### Vim Compatibility
-Some features have different behavior in Vim:
-- Floating windows use popup windows in Vim 8.2+
-- Terminal functionality requires Vim 8.1+
-- Some visual features may differ between Vim and Neovim
+
+#### Automatic Editor Detection
+The plugin automatically detects whether you're using Vim or Neovim and adapts its behavior accordingly.
+
+#### Feature Differences
+- **Floating windows**: 
+  - Neovim: Uses native floating windows
+  - Vim 8.2+: Uses popup windows
+  - Vim 8.1: Falls back to split windows
+- **Terminal handling**: Automatically uses the appropriate terminal API for each editor
+- **All core features work in both editors** with appropriate adaptations
+
+#### Technical Implementation
+The plugin includes a compatibility layer (`compatibility/` directory) that:
+- Abstracts editor-specific APIs
+- Provides consistent behavior across both editors
+- Handles terminal operations transparently (`chansend` in Neovim, `term_sendkeys` in Vim)
+- Manages window creation and positioning based on available features
 
 ## Contributing
 
