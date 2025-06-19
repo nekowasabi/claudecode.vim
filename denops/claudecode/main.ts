@@ -193,17 +193,37 @@ export async function main(denops: Denops): Promise<void> {
     }),
 
     await command("hide", "0", async () => {
-      const editorType = await EditorDetector.detect(denops);
-      if (editorType === "neovim") {
-        await denops.cmd("fclose!");
-      } else {
-        // Vimの場合はポップアップを閉じる
-        try {
-          await denops.call("popup_clear");
-        } catch {
-          // ポップアップが存在しない場合は無視
-        }
+      const claudeBuffer = await buffer.getClaudeBuffer(denops);
+
+      if (!claudeBuffer) {
+        // Claudeバッファが存在しない場合は何もしない
+        return;
       }
+
+      // Claudeバッファがフローティングウィンドウに表示されているかチェック
+      const isFloating = await buffer.isClaudeBufferInFloatingWindow(
+        denops,
+        claudeBuffer.bufnr,
+      );
+
+      if (isFloating) {
+        // フローティングウィンドウの場合は従来の動作
+        const editorType = await EditorDetector.detect(denops);
+        if (editorType === "neovim") {
+          await denops.cmd("fclose!");
+        } else {
+          // Vimの場合はポップアップを閉じる
+          try {
+            await denops.call("popup_clear");
+          } catch {
+            // ポップアップが存在しない場合は無視
+          }
+        }
+      } else {
+        // 分割ウィンドウの場合はウィンドウのみ閉じる（バッファは保持）
+        await buffer.closeClaudeBuffer(denops, claudeBuffer.bufnr);
+      }
+
       await denops.cmd("silent! e!");
     }),
 

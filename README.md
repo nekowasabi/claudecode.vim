@@ -81,13 +81,17 @@ Plug 'nekowasabi/claudecode.vim'
 
 ### Core Commands
 
-| Command           | Description                                       |
-| ----------------- | ------------------------------------------------- |
-| `:ClaudeRun`      | Start Claude Code interactive session             |
-| `:ClaudeContinue` | Continue the most recent Claude Code conversation |
-| `:ClaudeReview`   | Request code review from Claude Code              |
-| `:ClaudeHide`     | Hide Claude Code buffer                           |
-| `:ClaudeExit`     | Exit Claude Code session                          |
+| Command              | Description                                       |
+| -------------------- | ------------------------------------------------- |
+| `:ClaudeRun`         | Start Claude Code interactive session             |
+| `:ClaudeRunFloating` | Start Claude Code in floating window             |
+| `:ClaudeRunSplit`    | Start Claude Code in horizontal split window     |
+| `:ClaudeRunVsplit`   | Start Claude Code in vertical split window       |
+| `:ClaudeRunToggle`   | Toggle between floating and split window modes   |
+| `:ClaudeContinue`    | Continue the most recent Claude Code conversation |
+| `:ClaudeReview`      | Request code review from Claude Code              |
+| `:ClaudeHide`        | Hide Claude Code buffer (smart window handling)   |
+| `:ClaudeExit`        | Exit Claude Code session                          |
 
 ### File Management
 
@@ -118,8 +122,16 @@ Plug 'nekowasabi/claudecode.vim'
 ### Basic Workflow
 
 ```vim
-" Start Claude Code
+" Start Claude Code (uses default window type)
 :ClaudeRun
+
+" Or start with specific window type
+:ClaudeRunFloating    " Force floating window
+:ClaudeRunSplit       " Force horizontal split
+:ClaudeRunVsplit      " Force vertical split
+
+" Toggle between floating and split modes
+:ClaudeRunToggle
 
 " Add current file to context
 :ClaudeAddCurrentFile
@@ -129,6 +141,9 @@ Plug 'nekowasabi/claudecode.vim'
 
 " Request code review
 :ClaudeReview
+
+" Hide Claude window (smart: preserves terminal in split mode)
+:ClaudeHide
 
 " Continue previous conversation
 :ClaudeContinue
@@ -146,11 +161,44 @@ Plug 'nekowasabi/claudecode.vim'
 ```vim
 " Example key mappings
 nnoremap <leader>cr :ClaudeRun<CR>
+nnoremap <leader>cf :ClaudeRunFloating<CR>
+nnoremap <leader>cs :ClaudeRunSplit<CR>
+nnoremap <leader>ct :ClaudeRunToggle<CR>
 nnoremap <leader>ca :ClaudeAddCurrentFile<CR>
 nnoremap <leader>cc :ClaudeContinue<CR>
 nnoremap <leader>cv :ClaudeReview<CR>
+nnoremap <leader>ch :ClaudeHide<CR>
 vnoremap <leader>cp :ClaudeVisualTextWithPrompt<CR>
 ```
+
+### Window Management
+
+The plugin provides flexible window management options:
+
+#### Display Modes
+
+- **Floating Window** (default): Modern overlay window that doesn't affect your current layout
+- **Horizontal Split**: Traditional split that divides the window horizontally
+- **Vertical Split**: Traditional split that divides the window vertically
+
+#### Smart Window Commands
+
+- **`:ClaudeRunToggle`**: Intelligently switches between floating and split modes
+  - If currently floating → switches to horizontal split
+  - If currently split → switches to floating
+  - If no Claude session exists → starts in floating mode
+
+#### Enhanced Hide Behavior
+
+**`:ClaudeHide`** now provides smart window management:
+
+- **Floating/Popup windows**: Closes the window completely (traditional behavior)
+- **Split windows**: Closes only the window while preserving the terminal process
+  - Terminal session remains active in background
+  - Can be reopened with `:ClaudeRun` to continue the same session
+  - Prevents accidental loss of conversation history
+
+This enhancement allows you to temporarily hide Claude when working in split mode without losing your session progress.
 
 ## How It Works
 
@@ -179,6 +227,9 @@ adapted for Claude Code:
 - Claude Code `/review` command support
 - Conversation continuation with `-c` flag
 - Updated command structure for Claude Code CLI
+- **Multiple window launch modes**: Direct commands for floating, split, and vsplit windows
+- **Smart window toggle**: `:ClaudeRunToggle` to switch between display modes
+- **Enhanced hide behavior**: Smart window management that preserves terminal sessions in split mode
 
 ### Command Mapping
 
