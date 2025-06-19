@@ -1,6 +1,6 @@
 # claudecode.vim
 
-A minimal Neovim helper plugin for the Claude Code AI coding assistant.
+A minimal Vim/Neovim helper plugin for the Claude Code AI coding assistant.
 
 ## Overview
 
@@ -13,12 +13,14 @@ claudecode.vim integrates Claude Code CLI with Vim/Neovim through denops, provid
 - **Visual Selection Support**: Send selected text as prompts to Claude Code
 - **Floating Window Interface**: Customizable floating windows for interactive operations
 - **Cross-Platform Support**: Works on all platforms supported by denops and Claude Code
+- **Vim/Neovim Compatibility**: Supports both Vim 8.1+ and Neovim
 
 ## Prerequisites
 
 - [denops.vim](https://github.com/vim-denops/denops.vim) - Required for plugin functionality
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) - Must be installed and accessible in PATH
 - Deno runtime - Required by denops
+- Vim 8.1+ with terminal support OR Neovim
 
 ## Installation
 
@@ -60,9 +62,9 @@ Plug 'nekowasabi/claudecode.vim'
 | `g:claude_buffer_open_type` | String | `"floating"` | Buffer opening method (`floating`, `split`, `vsplit`) |
 | `g:claude_floatwin_height` | Number | `20` | Floating window height |
 | `g:claude_floatwin_width` | Number | `100` | Floating window width |
-| `g:claude_floatwin_style` | String | `"minimal"` | Floating window style |
+| `g:claude_floatwin_style` | String | `"minimal"` | Floating window style (Neovim only) |
 | `g:claude_floatwin_border` | String/Array | `"rounded"` | Floating window border |
-| `g:claude_floatwin_blend` | Number | `0` | Floating window transparency |
+| `g:claude_floatwin_blend` | Number | `0` | Floating window transparency (Neovim only) |
 
 ## Commands
 
@@ -190,6 +192,13 @@ Error: denops is not available
 If Claude Code buffer doesn't appear:
 - Check `g:claude_buffer_open_type` setting
 - Try different buffer opening modes (`floating`, `split`, `vsplit`)
+- Note: Floating windows require Neovim or Vim 8.2+ with popup support
+
+### Vim Compatibility
+Some features have different behavior in Vim:
+- Floating windows use popup windows in Vim 8.2+
+- Terminal functionality requires Vim 8.1+
+- Some visual features may differ between Vim and Neovim
 
 ## Contributing
 

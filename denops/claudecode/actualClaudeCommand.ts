@@ -4,6 +4,7 @@ import * as v from "https://deno.land/x/denops_std@v6.5.1/variable/mod.ts";
 import { ensure, is } from "https://deno.land/x/unknownutil@v3.18.1/mod.ts";
 import type { ClaudeCommand } from "./claudeCommand.ts";
 import * as util from "./utils.ts";
+import { AdapterFactory } from "./compatibility/adapterFactory.ts";
 
 export const commands: ClaudeCommand = {
   run,
@@ -33,7 +34,13 @@ async function run(denops: Denops): Promise<undefined> {
     await v.g.get(denops, "claude_command", "claude"),
     is.String,
   );
-  await denops.cmd(`terminal ${claudeCommand}`);
+  const adapter = await AdapterFactory.getAdapter(denops);
+  
+  if (!adapter.isTerminalSupported()) {
+    throw new Error("Terminal feature is not supported in this editor");
+  }
+  
+  await adapter.openTerminal(denops, claudeCommand);
   await emit(denops, "User", "ClaudeOpen");
 }
 
@@ -49,14 +56,15 @@ async function sendPrompt(
   jobId: number,
   prompt: string,
 ): Promise<undefined> {
+  const adapter = await AdapterFactory.getAdapter(denops);
   const promptLines = prompt.split("\n");
   const joined = promptLines.join("\x1b\x0d"); // use Esc + Ctrl-M instead of \n to avoid submit
 
   // プロンプトテキストを送信
-  await denops.call("chansend", jobId, joined);
+  await adapter.sendToTerminal(denops, jobId, joined);
 
   // エンターキーを送信
-  await denops.call("chansend", jobId, "\x0d");
+  await adapter.sendToTerminal(denops, jobId, "\x0d");
 }
 
 async function exit(
@@ -65,7 +73,8 @@ async function exit(
   bufnr: number,
 ): Promise<undefined> {
   if (jobId !== 0) {
-    await denops.call("chansend", jobId, "\x03"); // Ctrl-C to exit
+    const adapter = await AdapterFactory.getAdapter(denops);
+    await adapter.sendToTerminal(denops, jobId, "\x03"); // Ctrl-C to exit
   }
   await denops.cmd(`bdelete! ${bufnr}`);
 }

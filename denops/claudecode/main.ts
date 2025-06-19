@@ -3,6 +3,7 @@ import type { Denops } from "https://deno.land/x/denops_std@v6.5.1/mod.ts";
 import * as buffer from "./bufferOperation.ts";
 import type { BufferLayout } from "./bufferOperation.ts";
 import { getCurrentFilePath } from "./utils.ts";
+import { EditorDetector } from "./editorDetector.ts";
 
 /**
  * The main function that sets up the Claude Code plugin functionality.
@@ -154,7 +155,17 @@ export async function main(denops: Denops): Promise<void> {
     }),
 
     await command("hide", "0", async () => {
-      await denops.cmd("fclose!");
+      const editorType = await EditorDetector.detect(denops);
+      if (editorType === "neovim") {
+        await denops.cmd("fclose!");
+      } else {
+        // Vimの場合はポップアップを閉じる
+        try {
+          await denops.call("popup_clear");
+        } catch {
+          // ポップアップが存在しない場合は無視
+        }
+      }
       await denops.cmd("silent! e!");
     }),
 

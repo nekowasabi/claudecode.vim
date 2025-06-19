@@ -1,6 +1,5 @@
 import * as fn from "https://deno.land/x/denops_std@v6.5.1/function/mod.ts";
 import { feedkeys } from "https://deno.land/x/denops_std@v6.5.1/function/mod.ts";
-import * as n from "https://deno.land/x/denops_std@v6.5.1/function/nvim/mod.ts";
 import type { Denops } from "https://deno.land/x/denops_std@v6.5.1/mod.ts";
 import * as v from "https://deno.land/x/denops_std@v6.5.1/variable/mod.ts";
 import {
@@ -10,6 +9,8 @@ import {
 } from "https://deno.land/x/unknownutil@v3.18.1/mod.ts";
 import { claude } from "./claudeCommand.ts";
 import { getCurrentFilePath, getPromptFromVimVariable } from "./utils.ts";
+import { AdapterFactory } from "./compatibility/adapterFactory.ts";
+import { EditorDetector } from "./editorDetector.ts";
 
 /**
  * Enum representing different buffer layout options.
@@ -45,10 +46,8 @@ export async function exitClaudeBuffer(denops: Denops): Promise<void> {
     const bufnr = ensure(await fn.bufnr(denops, i), is.Number);
 
     if (await claude().checkIfClaudeBuffer(denops, bufnr)) {
-      const jobId = ensure(
-        await fn.getbufvar(denops, bufnr, "&channel"),
-        is.Number,
-      );
+      const adapter = await AdapterFactory.getAdapter(denops);
+      const jobId = await adapter.getTerminalJobId(denops, bufnr);
       claude().exit(denops, jobId, bufnr);
     }
   }
@@ -73,10 +72,8 @@ export async function openClaudeBuffer(
   const claudeBuf = await getClaudeBuffer(denops);
   if (openBufferType === "floating") {
     if (claudeBuf === undefined) {
-      const bufnr = ensure(
-        await n.nvim_create_buf(denops, false, true),
-        is.Number,
-      );
+      const adapter = await AdapterFactory.getAdapter(denops);
+      const bufnr = await adapter.createBuffer(denops, false, true);
       await openFloatingWindow(denops, bufnr);
       await claude().run(denops);
       return;
@@ -153,6 +150,17 @@ export async function sendPrompt(
       await openClaudeBuffer(denops, openBufferType);
     }
     await sendPromptFromFloatingWindow(denops, input);
+    const editorType = await EditorDetector.detect(denops);
+    if (editorType === "neovim") {
+      await denops.cmd("fclose!");
+    } else {
+      // Vimの場合はポップアップを閉じる
+      try {
+        await denops.call("popup_clear");
+      } catch {
+        // ポップアップが存在しない場合は無視
+      }
+    }
     return;
   }
 
@@ -206,10 +214,8 @@ export async function openFloatingWindowWithSelectedCode(
     denops,
     "claude_visual_select_buffer_prompt",
   );
-  const bufnr = ensure(
-    await n.nvim_create_buf(denops, false, true),
-    is.Number,
-  );
+  const adapter = await AdapterFactory.getAdapter(denops);
+  const bufnr = await adapter.createBuffer(denops, false, true);
   await openFloatingWindow(denops, bufnr);
 
   if (backupPrompt) {
@@ -220,29 +226,29 @@ export async function openFloatingWindowWithSelectedCode(
 
   await denops.cmd("setlocal filetype=markdown");
 
-  await n.nvim_buf_set_keymap(denops, bufnr, "n", "Q", "<cmd>fclose!<CR>", {
-    silent: true,
+  const editorType = await EditorDetector.detect(denops);
+  const closeCommand = editorType === "neovim" ? "<cmd>fclose!<CR>" : "<cmd>call popup_clear()<CR>";
+  await adapter.setBufferKeymap(denops, {
+    buffer: bufnr,
+    mode: "n",
+    lhs: "Q",
+    rhs: closeCommand,
+    opts: { noremap: true, silent: true },
   });
-  await n.nvim_buf_set_keymap(
-    denops,
-    bufnr,
-    "n",
-    "q",
-    "<cmd>ClaudeHideVisualSelectFloatingWindow<CR>",
-    {
-      silent: true,
-    },
-  );
-  await n.nvim_buf_set_keymap(
-    denops,
-    bufnr,
-    "n",
-    "<cr>",
-    "<cmd>ClaudeSendPromptByBuffer<cr>",
-    {
-      silent: true,
-    },
-  );
+  await adapter.setBufferKeymap(denops, {
+    buffer: bufnr,
+    mode: "n",
+    lhs: "q",
+    rhs: "<cmd>ClaudeHideVisualSelectFloatingWindow<CR>",
+    opts: { noremap: true, silent: true },
+  });
+  await adapter.setBufferKeymap(denops, {
+    buffer: bufnr,
+    mode: "n",
+    lhs: "<cr>",
+    rhs: "<cmd>ClaudeSendPromptByBuffer<cr>",
+    opts: { noremap: true, silent: true },
+  });
 }
 
 /**
@@ -261,7 +267,8 @@ async function handleBackupPrompt(
   backupPrompt: string[],
 ) {
   await v.g.set(denops, "claude_visual_select_buffer_prompt", undefined);
-  await n.nvim_buf_set_lines(denops, bufnr, 0, -1, true, backupPrompt);
+  const adapter = await AdapterFactory.getAdapter(denops);
+  await adapter.setBufferLines(denops, bufnr, 0, -1, backupPrompt);
   await feedkeys(denops, "Gi");
 }
 
@@ -287,28 +294,28 @@ async function handleNoBackupPrompt(
   words.unshift("```" + filetype);
   words.push("```");
 
-  await n.nvim_buf_set_lines(denops, bufnr, -1, -1, true, words);
-  await n.nvim_buf_set_lines(denops, bufnr, 0, 1, true, []);
-  await n.nvim_buf_set_lines(denops, bufnr, -1, -1, true, [""]);
+  const adapter = await AdapterFactory.getAdapter(denops);
+  await adapter.setBufferLines(denops, bufnr, -1, -1, words);
+  await adapter.setBufferLines(denops, bufnr, 0, 1, []);
+  await adapter.setBufferLines(denops, bufnr, -1, -1, [""]);
 
   const additionalPrompt = await getPromptFromVimVariable(
     denops,
     "claude_additional_prompt",
   );
   if (additionalPrompt) {
-    await n.nvim_buf_set_lines(denops, bufnr, -1, -1, true, ["# rule"]);
-    await n.nvim_buf_set_lines(
+    await adapter.setBufferLines(denops, bufnr, -1, -1, ["# rule"]);
+    await adapter.setBufferLines(
       denops,
       bufnr,
       -1,
       -1,
-      true,
       additionalPrompt,
     );
-    await n.nvim_buf_set_lines(denops, bufnr, -1, -1, true, [""]);
+    await adapter.setBufferLines(denops, bufnr, -1, -1, [""]);
   }
-  await n.nvim_buf_set_lines(denops, bufnr, -1, -1, true, ["# prompt"]);
-  await n.nvim_buf_set_lines(denops, bufnr, -1, -1, true, [""]);
+  await adapter.setBufferLines(denops, bufnr, -1, -1, ["# prompt"]);
+  await adapter.setBufferLines(denops, bufnr, -1, -1, [""]);
   await feedkeys(denops, "Gi");
 }
 
@@ -321,7 +328,17 @@ export async function hideVisualSelectFloatingWindow(
   );
   await v.g.set(denops, "claude_visual_select_buffer_prompt", bufferContent);
 
-  await denops.cmd("fclose!");
+  const editorType = await EditorDetector.detect(denops);
+  if (editorType === "neovim") {
+    await denops.cmd("fclose!");
+  } else {
+    // Vimの場合はポップアップを閉じる
+    try {
+      await denops.call("popup_clear");
+    } catch {
+      // ポップアップが存在しない場合は無視
+    }
+  }
 }
 
 /**
@@ -359,11 +376,20 @@ async function openFloatingWindow(
   denops: Denops,
   bufnr: number,
 ): Promise<void> {
+  const adapter = await AdapterFactory.getAdapter(denops);
+  
+  if (!adapter.isFloatingWindowSupported()) {
+    // フローティングウィンドウがサポートされていない場合は分割ウィンドウで開く
+    await openSplitWindow(denops);
+    await denops.cmd(`buffer ${bufnr}`);
+    return;
+  }
+  
   const terminal_width = Math.floor(
-    ensure(await n.nvim_get_option(denops, "columns"), is.Number),
+    ensure(await denops.eval("&columns"), is.Number),
   );
   const terminal_height = Math.floor(
-    ensure(await n.nvim_get_option(denops, "lines"), is.Number),
+    ensure(await denops.eval("&lines"), is.Number),
   );
   const floatWinHeight =
     maybe(await v.g.get(denops, "claude_floatwin_height"), is.Number) || 20;
@@ -431,13 +457,23 @@ async function openFloatingWindow(
         ? { ...optsWithoutStyle, style: "minimal" }
         : optsWithoutStyle;
 
-  const winid = await n.nvim_open_win(denops, bufnr, true, opts);
+  const config = {
+    width: floatWinWidth,
+    height: floatWinHeight,
+    row: row,
+    col: col,
+    relative: "editor" as const,
+    style: floatWinStyle,
+    border: floatWinBorder,
+  };
+  
+  const winid = await adapter.openWindow(denops, bufnr, true, config);
 
   // ウィンドウの透明度を設定
-  await n.nvim_win_set_option(denops, winid, "winblend", floatWinBlend);
+  await adapter.setWindowOption(denops, winid, "winblend", floatWinBlend);
 
   // ターミナルの背景色を引き継ぐための設定
-  await n.nvim_win_set_option(
+  await adapter.setWindowOption(
     denops,
     winid,
     "winhighlight",
@@ -529,10 +565,8 @@ export async function getClaudeBuffer(
     }
 
     if (await claude().checkIfClaudeBuffer(denops, bufnr)) {
-      const jobId = ensure(
-        await fn.getbufvar(denops, bufnr, "&channel"),
-        is.Number,
-      );
+      const adapter = await AdapterFactory.getAdapter(denops);
+      const jobId = await adapter.getTerminalJobId(denops, bufnr);
 
       // testMode時はjobを走らせていないのでその場合は0でも許容
       // プロセスが動いていない場合(session復元時など)はバッファを削除
