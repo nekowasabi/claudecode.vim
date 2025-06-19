@@ -13,21 +13,19 @@ if !has('terminal')
 endif
 
 " プラグインのパス設定
-set runtimepath+=/Users/ttakeda/.config/nvim/plugged/denops.vim
-set runtimepath+=/Users/ttakeda/.config/nvim/plugged/claudecode.vim
+" 現在のディレクトリから相対的にパスを設定
+let s:plugin_dir = expand('<sfile>:p:h')
+execute 'set runtimepath+=' . s:plugin_dir . '/../denops.vim'
+execute 'set runtimepath+=' . s:plugin_dir
+
+" denops.vimを明示的に読み込み
+runtime plugin/denops.vim
 
 " Claude Code の設定
 let g:claude_command = "claude"
-let g:claude_buffer_open_type = "split"  " Vimではsplitが安定
+let g:claude_buffer_open_type = "split"  " Vimでは分割ウィンドウを使用
 let g:claude_floatwin_height = 20
 let g:claude_floatwin_width = 100
-
-" Vim 8.2+ でポップアップウィンドウを試す場合
-if has('popupwin') && v:version >= 802
-  let g:claude_buffer_open_type = "floating"
-  let g:claude_floatwin_style = "minimal"
-  let g:claude_floatwin_border = "rounded"
-endif
 
 " 便利なキーマッピング
 nnoremap <leader>cr :ClaudeRun<CR>

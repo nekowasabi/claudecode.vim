@@ -31,31 +31,10 @@ export class VimAdapter implements EditorAdapter {
     _enter: boolean,
     config: WindowConfig,
   ): Promise<number> {
-    // Vimではポップアップウィンドウを使用（Vim 8.2以降）
-    const hasPopup = await fn.has(denops, "popupwin");
-
-    if (hasPopup) {
-      // ポップアップウィンドウとして開く
-      const popupId = await denops.call("popup_create", buffer, {
-        line: config.row + 1,
-        col: config.col + 1,
-        minwidth: config.width,
-        maxwidth: config.width,
-        minheight: config.height,
-        maxheight: config.height,
-        border: config.border ? [1, 1, 1, 1] : [0, 0, 0, 0],
-        scrollbar: 0,
-        zindex: 50,
-        mapping: 0,
-      }) as number;
-
-      return popupId;
-    } else {
-      // ポップアップが使えない場合は分割ウィンドウを使用
-      const splitCmd = config.height > config.width ? "split" : "vsplit";
-      await denops.cmd(`${splitCmd} | buffer ${buffer}`);
-      return await fn.winnr(denops) as number;
-    }
+    // Vimでは常に分割ウィンドウを使用（ポップアップの代わり）
+    const splitCmd = config.height > config.width ? "split" : "vsplit";
+    await denops.cmd(`${splitCmd} | buffer ${buffer}`);
+    return await fn.winnr(denops) as number;
   }
 
   async closeWindow(
@@ -63,21 +42,11 @@ export class VimAdapter implements EditorAdapter {
     winId: number,
     _force: boolean,
   ): Promise<void> {
-    const hasPopup = await fn.has(denops, "popupwin");
-
-    if (hasPopup) {
-      try {
-        await denops.call("popup_close", winId);
-      } catch {
-        // ポップアップが既に閉じられている可能性
-      }
-    } else {
-      // 通常のウィンドウとして閉じる
-      const currentWin = await fn.winnr(denops);
-      await denops.cmd(`${winId}wincmd w`);
-      await denops.cmd("close");
-      await denops.cmd(`${currentWin}wincmd w`);
-    }
+    // 通常のウィンドウとして閉じる
+    const currentWin = await fn.winnr(denops);
+    await denops.cmd(`${winId}wincmd w`);
+    await denops.cmd("close");
+    await denops.cmd(`${currentWin}wincmd w`);
   }
 
   async setBufferLines(
@@ -127,20 +96,16 @@ export class VimAdapter implements EditorAdapter {
     option: string,
     value: unknown,
   ): Promise<void> {
-    const hasPopup = await fn.has(denops, "popupwin");
-
-    if (hasPopup && option === "winblend") {
-      // Vimのポップアップでは透明度は設定できないのでスキップ
+    if (option === "winblend") {
+      // Vimでは透明度は設定できないのでスキップ
       return;
     }
 
-    if (!hasPopup) {
-      // 通常のウィンドウオプションとして設定
-      const currentWin = await fn.winnr(denops);
-      await denops.cmd(`${winId}wincmd w`);
-      await denops.cmd(`setlocal ${option}=${value}`);
-      await denops.cmd(`${currentWin}wincmd w`);
-    }
+    // 通常のウィンドウオプションとして設定
+    const currentWin = await fn.winnr(denops);
+    await denops.cmd(`${winId}wincmd w`);
+    await denops.cmd(`setlocal ${option}=${value}`);
+    await denops.cmd(`${currentWin}wincmd w`);
   }
 
   async getTerminalJobId(denops: Denops, buffer: number): Promise<number> {
@@ -180,9 +145,8 @@ export class VimAdapter implements EditorAdapter {
   }
 
   isFloatingWindowSupported(): boolean {
-    // Vim 8.2以降でポップアップウィンドウがサポートされているかチェックが必要
-    // ここでは簡略化のためtrueを返す（実際は動的にチェックすべき）
-    return true;
+    // Vimではフローティングウィンドウの代わりにスプリットウィンドウを使用
+    return false;
   }
 
   isTerminalSupported(): boolean {
