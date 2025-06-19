@@ -148,6 +148,44 @@ export async function main(denops: Denops): Promise<void> {
       );
     }),
 
+    await command("runFloating", "0", async () => {
+      await buffer.openClaudeBuffer(denops, "floating");
+    }),
+
+    await command("runSplit", "0", async () => {
+      await buffer.openClaudeBuffer(denops, "split");
+    }),
+
+    await command("runVsplit", "0", async () => {
+      await buffer.openClaudeBuffer(denops, "vsplit");
+    }),
+
+    await command("runToggle", "0", async () => {
+      const claudeBuffer = await buffer.getClaudeBuffer(denops);
+
+      if (!claudeBuffer) {
+        // No existing Claude buffer, open with default layout
+        await buffer.openClaudeBuffer(denops, "floating");
+        return;
+      }
+
+      // Check if current window is floating
+      const isFloating = await buffer.isClaudeBufferInFloatingWindow(
+        denops,
+        claudeBuffer.bufnr,
+      );
+
+      if (isFloating) {
+        // Switch from floating to split
+        await buffer.closeClaudeBuffer(denops, claudeBuffer.bufnr);
+        await buffer.openClaudeBuffer(denops, "split");
+      } else {
+        // Switch from split to floating
+        await buffer.closeClaudeBuffer(denops, claudeBuffer.bufnr);
+        await buffer.openClaudeBuffer(denops, "floating");
+      }
+    }),
+
     await command("silentRun", "0", () => buffer.silentRun(denops)),
 
     await command("hideVisualSelectFloatingWindow", "0", async () => {

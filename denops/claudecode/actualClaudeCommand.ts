@@ -35,11 +35,11 @@ async function run(denops: Denops): Promise<undefined> {
     is.String,
   );
   const adapter = await AdapterFactory.getAdapter(denops);
-  
+
   if (!adapter.isTerminalSupported()) {
     throw new Error("Terminal feature is not supported in this editor");
   }
-  
+
   await adapter.openTerminal(denops, claudeCommand);
   await emit(denops, "User", "ClaudeOpen");
 }

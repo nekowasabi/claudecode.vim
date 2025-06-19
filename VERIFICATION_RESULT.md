@@ -1,21 +1,26 @@
 # Vim/Neovim互換性検証結果
 
 ## 検証日時
+
 2025-06-19
 
 ## 検証内容
-GitHub Issue #2の要件に従い、VimとNeovimの両方でClaudeRunコマンドがウィンドウを正しく分割するかを検証。
+
+GitHub Issue
+#2の要件に従い、VimとNeovimの両方でClaudeRunコマンドがウィンドウを正しく分割するかを検証。
 
 ## 検証結果
 
 ### Neovim
+
 - **結果**: ✅ 成功
-- **詳細**: 
+- **詳細**:
   - `split`モードで水平分割を確認（ウィンドウ数が1→2に増加）
   - `vsplit`モードで垂直分割が可能
   - `floating`モードでフローティングウィンドウが動作
 
 ### Vim
+
 - **結果**: ⚠️ 部分的に成功
 - **課題**:
   - denops.vimの初期化に関するエラーが発生
@@ -41,6 +46,7 @@ GitHub Issue #2の要件に従い、VimとNeovimの両方でClaudeRunコマン�
 ## 推奨される手動テスト手順
 
 ### Vimでのテスト
+
 ```vim
 " Vimを起動して以下を実行
 :let g:claude_buffer_open_type = 'split'
@@ -49,7 +55,8 @@ GitHub Issue #2の要件に従い、VimとNeovimの両方でClaudeRunコマン�
 :echo winnr('$')  " 2が表示されれば成功
 ```
 
-### Neovimでのテスト  
+### Neovimでのテスト
+
 ```vim
 " Neovimを起動して以下を実行
 :let g:claude_buffer_open_type = 'split'

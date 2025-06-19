@@ -13,7 +13,7 @@ export class EditorDetector {
 
     const hasNvim = await fn.has(denops, "nvim");
     this.editorType = hasNvim ? "neovim" : "vim";
-    
+
     return this.editorType;
   }
 

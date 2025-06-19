@@ -54,6 +54,82 @@ export async function exitClaudeBuffer(denops: Denops): Promise<void> {
 }
 
 /**
+ * Claude Code バッファの表示を閉じる（バッファは残す）
+ *
+ * @param {Denops} denops - Denopsインスタンス
+ * @param {number} bufnr - バッファ番号
+ * @returns {Promise<void>} 処理が完了すると解決されるPromise
+ */
+export async function closeClaudeBuffer(
+  denops: Denops,
+  bufnr: number,
+): Promise<void> {
+  // すべてのウィンドウを調べて、指定されたバッファが表示されているウィンドウを閉じる
+  const winCount = ensure(await denops.call("winnr", "$"), is.Number);
+
+  for (let i = 1; i <= winCount; i++) {
+    const winBufnr = ensure(await denops.call("winbufnr", i), is.Number);
+    if (winBufnr === bufnr) {
+      await denops.cmd(`${i}close`);
+      break;
+    }
+  }
+}
+
+/**
+ * Claude Code バッファがフローティングウィンドウに表示されているかどうかを判定
+ *
+ * @param {Denops} denops - Denopsインスタンス
+ * @param {number} bufnr - バッファ番号
+ * @returns {Promise<boolean>} フローティングウィンドウに表示されている場合はtrue
+ */
+export async function isClaudeBufferInFloatingWindow(
+  denops: Denops,
+  bufnr: number,
+): Promise<boolean> {
+  const editorType = await EditorDetector.detect(denops);
+
+  if (editorType === "vim") {
+    // Vimの場合、ポップアップウィンドウかどうかを判定
+    // 現在のウィンドウ数を取得し、通常の分割ウィンドウかどうかを判定
+    const winCount = ensure(await denops.call("winnr", "$"), is.Number);
+
+    // バッファが表示されているウィンドウを探す
+    for (let i = 1; i <= winCount; i++) {
+      const winBufnr = ensure(await denops.call("winbufnr", i), is.Number);
+      if (winBufnr === bufnr) {
+        // 通常の分割ウィンドウとして表示されている場合はfalse
+        return false;
+      }
+    }
+
+    // 通常のウィンドウに見つからない場合はポップアップウィンドウと判定
+    return true;
+  } else {
+    // Neovimの場合、フローティングウィンドウかどうかを判定
+    const winCount = ensure(await denops.call("winnr", "$"), is.Number);
+
+    for (let i = 1; i <= winCount; i++) {
+      const winBufnr = ensure(await denops.call("winbufnr", i), is.Number);
+      if (winBufnr === bufnr) {
+        const winId = ensure(await denops.call("win_getid", i), is.Number);
+        try {
+          const config = await denops.call("nvim_win_get_config", winId);
+          // relative が設定されていればフローティングウィンドウ
+          return ensure(config, is.Record).relative !== "";
+        } catch {
+          // エラーが発生した場合は通常のウィンドウと判定
+          return false;
+        }
+      }
+    }
+
+    // ウィンドウが見つからない場合はfalse
+    return false;
+  }
+}
+
+/**
  * Opens a Claude Code buffer.
  * If a Claude Code buffer is already alive, it opens that buffer.
  * If no Claude Code buffer is alive, it creates a new buffer and opens it.
@@ -87,10 +163,12 @@ export async function openClaudeBuffer(
   if (openBufferType === "split" || openBufferType === "vsplit") {
     if (claudeBuf === undefined) {
       await denops.cmd(openBufferType);
+      await claude().run(denops);
     } else {
-      await openSplitWindow(denops);
+      // Use the specified buffer type for existing buffers too
+      await denops.cmd(openBufferType);
+      await denops.cmd(`buffer ${claudeBuf.bufnr}`);
     }
-    await claude().run(denops);
     return;
   }
 }
@@ -227,7 +305,9 @@ export async function openFloatingWindowWithSelectedCode(
   await denops.cmd("setlocal filetype=markdown");
 
   const editorType = await EditorDetector.detect(denops);
-  const closeCommand = editorType === "neovim" ? "<cmd>fclose!<CR>" : "<cmd>call popup_clear()<CR>";
+  const closeCommand = editorType === "neovim"
+    ? "<cmd>fclose!<CR>"
+    : "<cmd>call popup_clear()<CR>";
   await adapter.setBufferKeymap(denops, {
     buffer: bufnr,
     mode: "n",
@@ -377,14 +457,14 @@ async function openFloatingWindow(
   bufnr: number,
 ): Promise<void> {
   const adapter = await AdapterFactory.getAdapter(denops);
-  
+
   if (!adapter.isFloatingWindowSupported()) {
     // フローティングウィンドウがサポートされていない場合は分割ウィンドウで開く
     await openSplitWindow(denops);
     await denops.cmd(`buffer ${bufnr}`);
     return;
   }
-  
+
   const terminal_width = Math.floor(
     ensure(await denops.eval("&columns"), is.Number),
   );
@@ -466,7 +546,7 @@ async function openFloatingWindow(
     style: floatWinStyle,
     border: floatWinBorder,
   };
-  
+
   const winid = await adapter.openWindow(denops, bufnr, true, config);
 
   // ウィンドウの透明度を設定

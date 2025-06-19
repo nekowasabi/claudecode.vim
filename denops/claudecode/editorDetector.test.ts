@@ -7,19 +7,19 @@ test({
   name: "EditorDetector",
   fn: async (denops) => {
     EditorDetector.reset();
-    
+
     const editorType = await EditorDetector.detect(denops);
-    
+
     if (denops.meta.host === "nvim") {
       assertEquals(editorType, "neovim");
     } else {
       assertEquals(editorType, "vim");
     }
-    
+
     // キャッシュが働くことを確認
     const secondCall = await EditorDetector.detect(denops);
     assertEquals(editorType, secondCall);
-    
+
     // リセット後は再検出されることを確認
     EditorDetector.reset();
     const afterReset = await EditorDetector.detect(denops);
