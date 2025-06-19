@@ -1,0 +1,80 @@
+" claudecode.vim テスト用 vimrc
+" 使用方法: vim -u test_vimrc
+
+" 基本設定
+set nocompatible
+filetype plugin indent on
+syntax enable
+
+" ターミナルサポートの確認
+if !has('terminal')
+  echo "Error: This version of Vim doesn't support terminal"
+  finish
+endif
+
+" プラグインのパス設定
+" 現在のディレクトリから相対的にパスを設定
+let s:plugin_dir = expand('<sfile>:p:h')
+execute 'set runtimepath+=' . s:plugin_dir . '/../denops.vim'
+execute 'set runtimepath+=' . s:plugin_dir
+
+" denops.vimを明示的に読み込み
+runtime plugin/denops.vim
+
+" Claude Code の設定
+let g:claude_command = "claude"
+let g:claude_buffer_open_type = "split"  " Vimでは分割ウィンドウを使用
+let g:claude_floatwin_height = 20
+let g:claude_floatwin_width = 100
+
+" 便利なキーマッピング
+nnoremap <leader>cr :ClaudeRun<CR>
+nnoremap <leader>ca :ClaudeAddCurrentFile<CR>
+nnoremap <leader>cc :ClaudeContinue<CR>
+nnoremap <leader>cv :ClaudeReview<CR>
+nnoremap <leader>ch :ClaudeHide<CR>
+nnoremap <leader>ce :ClaudeExit<CR>
+vnoremap <leader>cp :ClaudeVisualTextWithPrompt<CR>
+
+" デバッグ用の設定
+let g:denops#debug = 1
+
+" ステータスライン
+set laststatus=2
+set statusline=%f%m%r%h%w\ [%{&ff}]\ [%{&fenc}]\ %y\ %p%%\ %l/%L
+
+" その他の便利な設定
+set number
+set expandtab
+set tabstop=2
+set shiftwidth=2
+set autoindent
+set smartindent
+set hlsearch
+set incsearch
+set ignorecase
+set smartcase
+
+" テスト用のサンプルコマンド
+function! TestClaudeCommands()
+  echo "=== Testing Claude Commands ==="
+  echo "1. :ClaudeRun - Start Claude Code"
+  echo "2. :ClaudeAddCurrentFile - Add current file"
+  echo "3. :ClaudeSendPromptByCommandline 'Hello Claude' - Send prompt"
+  echo "4. :ClaudeHide - Hide Claude buffer"
+  echo "5. :ClaudeExit - Exit Claude"
+  echo ""
+  echo "Leader key is: " . get(g:, 'mapleader', '\')
+endfunction
+
+command! TestClaude call TestClaudeCommands()
+
+" 起動時のメッセージ
+echo "claudecode.vim test vimrc loaded successfully!"
+echo "Run :TestClaude to see available commands"
+echo "Vim version: " . v:version
+if has('popupwin')
+  echo "Popup window support: YES"
+else
+  echo "Popup window support: NO (using split windows)"
+endif

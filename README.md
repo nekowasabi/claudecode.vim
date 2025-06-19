@@ -1,6 +1,6 @@
 # claudecode.vim
 
-A minimal Neovim helper plugin for the Claude Code AI coding assistant.
+A minimal Vim/Neovim helper plugin for the Claude Code AI coding assistant.
 
 ## Overview
 
@@ -13,12 +13,15 @@ claudecode.vim integrates Claude Code CLI with Vim/Neovim through denops, provid
 - **Visual Selection Support**: Send selected text as prompts to Claude Code
 - **Floating Window Interface**: Customizable floating windows for interactive operations
 - **Cross-Platform Support**: Works on all platforms supported by denops and Claude Code
+- **Vim/Neovim Compatibility**: Supports both Vim 8.1+ and Neovim with automatic editor detection
+- **Automatic Editor Detection**: Seamless compatibility layer adapts behavior for each editor
 
 ## Prerequisites
 
 - [denops.vim](https://github.com/vim-denops/denops.vim) - Required for plugin functionality
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) - Must be installed and accessible in PATH
 - Deno runtime - Required by denops
+- Vim 8.1+ with terminal support OR Neovim (Vim 8.2+ recommended for full feature support)
 
 ## Installation
 
@@ -60,9 +63,9 @@ Plug 'nekowasabi/claudecode.vim'
 | `g:claude_buffer_open_type` | String | `"floating"` | Buffer opening method (`floating`, `split`, `vsplit`) |
 | `g:claude_floatwin_height` | Number | `20` | Floating window height |
 | `g:claude_floatwin_width` | Number | `100` | Floating window width |
-| `g:claude_floatwin_style` | String | `"minimal"` | Floating window style |
+| `g:claude_floatwin_style` | String | `"minimal"` | Floating window style (Neovim only) |
 | `g:claude_floatwin_border` | String/Array | `"rounded"` | Floating window border |
-| `g:claude_floatwin_blend` | Number | `0` | Floating window transparency |
+| `g:claude_floatwin_blend` | Number | `0` | Floating window transparency (Neovim only) |
 
 ## Commands
 
@@ -190,6 +193,27 @@ Error: denops is not available
 If Claude Code buffer doesn't appear:
 - Check `g:claude_buffer_open_type` setting
 - Try different buffer opening modes (`floating`, `split`, `vsplit`)
+- Note: Floating windows require Neovim or Vim 8.2+ with popup support
+
+### Vim Compatibility
+
+#### Automatic Editor Detection
+The plugin automatically detects whether you're using Vim or Neovim and adapts its behavior accordingly.
+
+#### Feature Differences
+- **Floating windows**: 
+  - Neovim: Uses native floating windows
+  - Vim 8.2+: Uses popup windows
+  - Vim 8.1: Falls back to split windows
+- **Terminal handling**: Automatically uses the appropriate terminal API for each editor
+- **All core features work in both editors** with appropriate adaptations
+
+#### Technical Implementation
+The plugin includes a compatibility layer (`compatibility/` directory) that:
+- Abstracts editor-specific APIs
+- Provides consistent behavior across both editors
+- Handles terminal operations transparently (`chansend` in Neovim, `term_sendkeys` in Vim)
+- Manages window creation and positioning based on available features
 
 ## Contributing
 
