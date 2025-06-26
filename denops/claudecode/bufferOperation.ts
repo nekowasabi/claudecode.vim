@@ -288,6 +288,10 @@ export async function openFloatingWindowWithSelectedCode(
       return;
     }
   }
+  
+  // フルパスを取得
+  const currentFilePath = await getCurrentFilePath(denops);
+  
   const backupPrompt = await getPromptFromVimVariable(
     denops,
     "claude_visual_select_buffer_prompt",
@@ -299,7 +303,7 @@ export async function openFloatingWindowWithSelectedCode(
   if (backupPrompt) {
     await handleBackupPrompt(denops, bufnr, backupPrompt);
   } else {
-    await handleNoBackupPrompt(denops, bufnr, words);
+    await handleNoBackupPrompt(denops, bufnr, words, currentFilePath);
   }
 
   await denops.cmd("setlocal filetype=markdown");
@@ -361,17 +365,21 @@ async function handleBackupPrompt(
  * @param {Denops} denops - Denopsインスタンス。
  * @param {number} bufnr - バッファ番号。
  * @param {string[]} words - バッファに設定するコード行。
+ * @param {string} currentFilePath - 現在のファイルのフルパス。
  */
 async function handleNoBackupPrompt(
   denops: Denops,
   bufnr: number,
   words: string[],
+  currentFilePath: string,
 ) {
   const filetype = ensure(
     await fn.getbufvar(denops, "%", "&filetype"),
     is.String,
   );
+  
   words.unshift("```" + filetype);
+  words.splice(1, 0, `@${currentFilePath}`); // フルパスを最初の行に追加
   words.push("```");
 
   const adapter = await AdapterFactory.getAdapter(denops);
@@ -597,26 +605,53 @@ async function sendPromptFromSplitWindow(
     return;
   }
 
-  if ((await v.g.get(denops, "claude_buffer_open_type")) !== "floating") {
-    await denops.cmd(`${claudeBuf.winnr}wincmd w`);
-  } else {
-    const totalWindows = ensure<number>(
-      await denops.call("winnr", "$"),
-      is.Number,
-    );
+  // 現在のバッファがClaude Codeのターミナルバッファかどうかを確認
+  const currentBufnr = await fn.bufnr(denops, "%");
+  const isCurrentBufferClaudeTerminal = currentBufnr === claudeBuf.bufnr;
 
-    for (let winnr = 1; winnr <= totalWindows; winnr++) {
-      const bufnr = await denops.call("winbufnr", winnr);
+  if (!isCurrentBufferClaudeTerminal) {
+    // 現在のバッファがClaude Codeのターミナルバッファでない場合のみ移動
+    if ((await v.g.get(denops, "claude_buffer_open_type")) !== "floating") {
+      await denops.cmd(`${claudeBuf.winnr}wincmd w`);
+    } else {
+      const totalWindows = ensure<number>(
+        await denops.call("winnr", "$"),
+        is.Number,
+      );
 
-      const buftype = await denops.call("getbufvar", bufnr, "&buftype");
+      for (let winnr = 1; winnr <= totalWindows; winnr++) {
+        const bufnr = await denops.call("winbufnr", winnr);
 
-      if (buftype === "terminal") {
-        await denops.cmd(`${winnr}wincmd w`);
-        break;
+        const buftype = await denops.call("getbufvar", bufnr, "&buftype");
+
+        if (buftype === "terminal") {
+          await denops.cmd(`${winnr}wincmd w`);
+          break;
+        }
       }
     }
   }
+  
+  // プロンプトを送信
   await claude().sendPrompt(denops, claudeBuf.jobId, prompt);
+  
+  // Claude Codeの応答を少し待つ
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // 最下段に移動してから上方向に「> 」を検索
+  await denops.cmd("normal! G");
+  
+  // 上方向に「> 」を検索し、その後に移動
+  try {
+    await denops.cmd("normal! ?> ");
+    await denops.cmd("normal! $");
+  } catch {
+    // 「> 」が見つからない場合は行末に移動
+    await denops.cmd("normal! $");
+  }
+  
+  // ターミナルモードに入る
+  await denops.cmd("startinsert");
 }
 
 type ClaudeBuffer = {

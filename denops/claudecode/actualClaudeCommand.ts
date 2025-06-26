@@ -57,14 +57,12 @@ async function sendPrompt(
   prompt: string,
 ): Promise<undefined> {
   const adapter = await AdapterFactory.getAdapter(denops);
-  const promptLines = prompt.split("\n");
-  const joined = promptLines.join("\x1b\x0d"); // use Esc + Ctrl-M instead of \n to avoid submit
-
-  // プロンプトテキストを送信
-  await adapter.sendToTerminal(denops, jobId, joined);
+  
+  // プロンプトテキストをそのまま送信
+  await adapter.sendToTerminal(denops, jobId, prompt);
 
   // エンターキーを送信
-  await adapter.sendToTerminal(denops, jobId, "\x0d");
+  await adapter.sendToTerminal(denops, jobId, "\n");
 }
 
 async function exit(
