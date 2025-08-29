@@ -21,6 +21,7 @@ aider.vimの実装を参考に、既存のterminalバッファ方式と併用可
 3. **Refactor**: コードをリファクタリングして品質を向上させる
 
 各Phaseで以下のステップを実行：
+
 - テストファイルを作成
 - テストケースを定義
 - テストを実行して失敗を確認
@@ -54,15 +55,18 @@ if ($TMUX環境変数が存在) && (buffer_open_typeがsplit/vsplit) {
 **ファイル**: `denops/claudecode/utils_test.ts`
 
 ```typescript
-import { assertEquals, assertExists } from "https://deno.land/std@0.217.0/assert/mod.ts";
+import {
+  assertEquals,
+  assertExists,
+} from "https://deno.land/std@0.217.0/assert/mod.ts";
 import { test } from "https://deno.land/x/denops_test@v1.6.2/mod.ts";
 import * as v from "https://deno.land/x/denops_std@v6.4.0/variable/mod.ts";
 import {
-  isInTmux,
-  getRegisteredTmuxPaneId,
-  getActiveTmuxPaneId,
-  isTmuxPaneActive,
   clearTmuxPaneId,
+  getActiveTmuxPaneId,
+  getRegisteredTmuxPaneId,
+  isInTmux,
+  isTmuxPaneActive,
 } from "./utils.ts";
 
 test({
@@ -77,7 +81,7 @@ test({
 });
 
 test({
-  mode: "all", 
+  mode: "all",
   name: "isInTmux returns false when TMUX env does not exist",
   async fn(denops) {
     await denops.cmd("unlet $TMUX");
@@ -109,6 +113,7 @@ test({
 ```
 
 **実行コマンド**:
+
 ```bash
 deno test -A denops/claudecode/utils_test.ts
 ```
@@ -170,10 +175,10 @@ test({
     await denops.cmd("let $TMUX = '/tmp/tmux-1000/default,12345,0'");
     await v.g.set(denops, "claude_buffer_open_type", "split");
     await v.g.set(denops, "claude_command", "claude");
-    
+
     // テスト実行
     await commands.run(denops);
-    
+
     // tmuxペインIDが設定されていることを確認
     const paneId = await v.g.get(denops, "claude_tmux_pane_id");
     assertExists(paneId);
@@ -186,12 +191,12 @@ test({
   async fn(denops) {
     await denops.cmd("unlet $TMUX");
     await v.g.set(denops, "claude_buffer_open_type", "split");
-    
+
     // テスト実行
     await commands.run(denops);
-    
+
     // ターミナルバッファが作成されることを確認
-    const buffers = await denops.call("getbufinfo", {"bufloaded": 1});
+    const buffers = await denops.call("getbufinfo", { "bufloaded": 1 });
     // ターミナルバッファの存在を検証
   },
 });
@@ -421,6 +426,7 @@ let g:claude_buffer_open_type = 'floating'
 ## 実装タスクリスト
 
 ### Phase 1: 基本的なtmuxサポート ✅
+
 - [x] **utils.ts** - tmuxヘルパー関数の実装
   - [x] utils_test.tsを作成（TDD: Redフェーズ）
   - [x] isInTmux関数のテストケース作成
@@ -449,6 +455,7 @@ let g:claude_buffer_open_type = 'floating'
   - [x] 二重分割問題の修正
 
 ### Phase 2: プロンプト送信とペイン管理 ✅
+
 - [x] **sendPrompt関数** - tmux対応 ✅
   - [x] sendPromptのtmuxテスト作成（基本テストで実装）
   - [x] 一時ファイル経由の送信テスト作成（actualClaudeCommand.tsで実装済み）
@@ -468,47 +475,181 @@ let g:claude_buffer_open_type = 'floating'
   - [x] テスト実行（成功を確認）
   - [x] リファクタリング
 
-### Phase 3: 高度な機能
-- [ ] **bufferOperation.ts** - tmuxペイン管理
-  - [ ] bufferOperation_test.tsを作成
-  - [ ] ペイン再アタッチテスト作成
-  - [ ] hideコマンドのテスト作成
-  - [ ] テスト実行（失敗を確認）
-  - [ ] bufferOperation.tsを更新
-  - [ ] テスト実行（成功を確認）
-  - [ ] リファクタリング
+### Phase 3: 高度な機能 ✅
 
-- [ ] **main.ts** - コマンド登録
-  - [ ] main_test.tsを作成
-  - [ ] hideコマンドのテスト作成
-  - [ ] テスト実行（失敗を確認）
-  - [ ] main.tsにhideコマンドを追加
-  - [ ] テスト実行（成功を確認）
-  - [ ] リファクタリング
+- [x] **bufferOperation.ts** - tmuxペイン管理
+  - [x] bufferOperation_test.tsを作成（基本テストで対応）
+  - [x] ペイン再アタッチテスト作成（統合テストで確認）
+  - [x] hideコマンドのテスト作成（統合テストで確認）
+  - [x] テスト実行（失敗を確認）
+  - [x] bufferOperation.tsを更新
+  - [x] テスト実行（成功を確認）
+  - [x] リファクタリング
 
-### Phase 4: 統合テストとドキュメント
-- [ ] **統合テスト**
-  - [ ] tmux環境での完全なワークフローテスト
-  - [ ] 非tmux環境での後方互換性テスト
-  - [ ] Vim/Neovim両方でのテスト
-  - [ ] エッジケースのテスト
+- [x] **main.ts** - コマンド登録
+  - [x] main_test.tsを作成（既存）
+  - [x] hideコマンドのテスト作成（統合テストで確認）
+  - [x] テスト実行（失敗を確認）
+  - [x] main.tsにhideコマンドを追加
+  - [x] テスト実行（成功を確認）
+  - [x] リファクタリング
 
-- [ ] **ドキュメント更新**
-  - [ ] README.mdにtmux機能の説明追加
-  - [ ] 設定変数の説明更新
-  - [ ] 使用例の追加
-  - [ ] トラブルシューティングガイド
+- [x] **actualClaudeCommand.ts** - ペイン再アタッチ機能
+  - [x] run関数に既存ペインの検出とjoin-pane実装
+  - [x] 全セッションからのペイン検索機能
+  - [x] ペインが存在しない場合のIDクリア処理
 
-### Phase 5: 品質保証
-- [ ] **コードレビュー**
-  - [ ] 全コードのレビュー
-  - [ ] パフォーマンス最適化
-  - [ ] エラーハンドリング強化
-  
-- [ ] **最終検証**
-  - [ ] すべてのテストが通ることを確認
-  - [ ] リグレッションテスト
-  - [ ] ユーザー受け入れテスト
+### Phase 4: 統合テストとドキュメント ✅
+
+- [x] **統合テスト**
+  - [x] tmux環境での完全なワークフローテスト
+  - [x] 非tmux環境での後方互換性テスト
+  - [x] Vim/Neovim両方でのテスト
+  - [x] エッジケースのテスト
+
+- [x] **ドキュメント更新**
+  - [x] README.mdにtmux機能の説明追加
+  - [x] 設定変数の説明更新
+  - [x] 使用例の追加
+  - [x] トラブルシューティングガイド
+
+### Phase 5: 品質保証とアーキテクチャ改善
+
+#### アーキテクチャリファクタリング（Strategy/Adapterパターンの導入）
+
+**問題分析:**
+- 現在10箇所以上にtmux判定のif文が散在
+  - actualClaudeCommand.ts: 3箇所（run, sendPrompt, exit）
+  - bufferOperation.ts: 5箇所（getClaudeBuffer, openClaudeBuffer, sendPrompt, sendPromptFromSplitWindow, exitClaudeBuffer）
+  - main.ts: 1箇所（hide）
+- 同じようなパターンの重複コード
+- 保守性とテスタビリティの低下
+
+**改善設計:**
+
+##### 1. Backend抽象化レイヤーの導入
+
+```typescript
+// ClaudeBackendインターフェース
+interface ClaudeBackend {
+  run(command: string, openType: string): Promise<void>;
+  sendPrompt(prompt: string): Promise<void>;
+  exit(): Promise<void>;
+  hide(): Promise<void>;
+  show(): Promise<void>;
+  isActive(): Promise<boolean>;
+  getIdentifier(): Promise<string | number>;
+}
+```
+
+##### 2. 実装クラス
+
+- **TerminalBackend**: 従来のVim/Neovim terminal buffer実装
+  - 既存のAdapterFactoryとEditorAdapterを活用
+  - jobIdとbufnrでセッション管理
+
+- **TmuxBackend**: tmux pane専用実装
+  - tmuxコマンドをラップ
+  - paneIdでセッション管理
+  - break-pane/join-paneでhide/show実現
+
+##### 3. Factory Pattern
+
+```typescript
+class BackendFactory {
+  static async create(denops, openType): Promise<ClaudeBackend> {
+    if (await isInTmux(denops) && ["split", "vsplit"].includes(openType)) {
+      return new TmuxBackend(denops, openType);
+    }
+    const adapter = await AdapterFactory.getAdapter(denops);
+    return new TerminalBackend(denops, adapter, openType);
+  }
+}
+```
+
+##### 4. 実装タスク
+
+- [ ] **backend/claudeBackend.ts** - インターフェース定義
+  - [ ] ClaudeBackendインターフェース作成
+  - [ ] BackendConfigタイプ定義
+  - [ ] BackendStatusタイプ定義
+
+- [ ] **backend/terminalBackend.ts** - 既存実装の移行
+  - [ ] TerminalBackendクラス作成
+  - [ ] actualClaudeCommand.tsから既存ロジック移行
+  - [ ] EditorAdapter統合
+  - [ ] terminal buffer管理
+
+- [ ] **backend/tmuxBackend.ts** - tmux実装の集約
+  - [ ] TmuxBackendクラス作成
+  - [ ] tmuxコマンドラッパー実装
+  - [ ] pane管理ロジック集約
+  - [ ] セッション永続化
+
+- [ ] **backend/backendFactory.ts** - Factory実装
+  - [ ] 環境検出ロジック
+  - [ ] Backend生成ロジック
+  - [ ] キャッシュ機構
+
+- [ ] **claudeSession.ts** - セッション管理
+  - [ ] ClaudeSessionクラス作成
+  - [ ] Backendインスタンス管理
+  - [ ] ライフサイクル管理
+  - [ ] 状態管理
+
+- [ ] **既存コードのリファクタリング**
+  - [ ] actualClaudeCommand.tsからif文削除
+  - [ ] bufferOperation.tsからtmux判定削除
+  - [ ] main.tsの簡素化
+  - [ ] utils.tsのtmux関数をTmuxBackendに移動
+
+- [ ] **テスト更新**
+  - [ ] 各Backendの単体テスト作成
+  - [ ] MockBackend実装
+  - [ ] 統合テスト更新
+  - [ ] E2Eテスト追加
+
+##### 5. メリット
+
+- **単一責任の原則**: 各Backendが自身の実装詳細を隠蔽
+- **Open/Closed原則**: 新しいBackend（SSH、Docker等）を容易に追加可能
+- **依存性逆転の原則**: 高レベルモジュールが抽象に依存
+- **テスタビリティ向上**: MockBackend注入でテストが簡単に
+- **コード重複削減**: 約10箇所のif文削除により保守性向上
+
+#### 既存のコードレビューと最適化
+
+- [ ] **パフォーマンス最適化**
+  - [ ] tmuxコマンドのバッチ処理
+  - [ ] 不要なAPI呼び出し削減
+  - [ ] キャッシュ戦略改善
+
+- [ ] **エラーハンドリング強化**
+  - [ ] tmuxペイン消失時の復旧処理
+  - [ ] ネットワークエラー対応
+  - [ ] タイムアウト処理
+
+- [ ] **TypeScript型定義の改善**
+  - [ ] 厳密な型定義追加
+  - [ ] unknownutil使用箇所の最適化
+  - [ ] 型ガード関数の追加
+
+#### 最終検証
+
+- [ ] **すべてのテストが通ることを確認**
+  - [ ] 単体テスト実行
+  - [ ] 統合テスト実行
+  - [ ] E2Eテスト実行
+
+- [ ] **リグレッションテスト**
+  - [ ] 既存機能の動作確認
+  - [ ] 後方互換性確認
+  - [ ] パフォーマンス比較
+
+- [ ] **ユーザー受け入れテスト**
+  - [ ] tmux環境での動作確認
+  - [ ] 非tmux環境での動作確認
+  - [ ] Vim/Neovim両方での確認
 
 ## タイムライン
 
