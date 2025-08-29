@@ -95,14 +95,6 @@ Plug 'nekowasabi/claudecode.vim'
 | `:ClaudeHide`        | Hide Claude Code buffer (smart window handling)   |
 | `:ClaudeExit`        | Exit Claude Code session                          |
 
-### File Management
-
-| Command                 | Description                                 |
-| ----------------------- | ------------------------------------------- |
-| `:ClaudeAddCurrentFile` | Add current file to Claude Code context     |
-| `:ClaudeAddFile {path}` | Add specified file to Claude Code context   |
-| `:ClaudeAddBuffers`     | Add all git-tracked open buffers to context |
-
 ### Prompt Commands
 
 | Command                                   | Description                                |
@@ -111,13 +103,6 @@ Plug 'nekowasabi/claudecode.vim'
 | `:ClaudeVisualTextWithPrompt`             | Send selected text with interactive prompt |
 | `:ClaudeSendPromptByBuffer`               | Send buffer content as prompt              |
 
-### Silent Commands (Background Operations)
-
-| Command                                         | Description                               |
-| ----------------------------------------------- | ----------------------------------------- |
-| `:ClaudeSilentRun`                              | Start Claude Code without switching focus |
-| `:ClaudeSilentAddCurrentFile`                   | Add current file silently                 |
-| `:ClaudeSilentSendPromptByCommandline {prompt}` | Send prompt silently                      |
 
 ## Usage Examples
 
@@ -134,9 +119,6 @@ Plug 'nekowasabi/claudecode.vim'
 
 " Toggle between floating and split modes
 :ClaudeRunToggle
-
-" Add current file to context
-:ClaudeAddCurrentFile
 
 " Send a prompt
 :ClaudeSendPromptByCommandline "Please explain this function"
@@ -166,7 +148,6 @@ nnoremap <leader>cr :ClaudeRun<CR>
 nnoremap <leader>cf :ClaudeRunFloating<CR>
 nnoremap <leader>cs :ClaudeRunSplit<CR>
 nnoremap <leader>ct :ClaudeRunToggle<CR>
-nnoremap <leader>ca :ClaudeAddCurrentFile<CR>
 nnoremap <leader>cc :ClaudeContinue<CR>
 nnoremap <leader>cv :ClaudeReview<CR>
 nnoremap <leader>ch :ClaudeHide<CR>
@@ -266,7 +247,7 @@ adapted for Claude Code:
 | aider.vim              | claudecode.vim          | Claude Code Equivalent |
 | ---------------------- | ----------------------- | ---------------------- |
 | `:AiderRun`            | `:ClaudeRun`            | `claude`               |
-| `:AiderAddCurrentFile` | `:ClaudeAddCurrentFile` | Add file to context    |
+| `:AiderAddCurrentFile` | N/A                     | Add file to context    |
 | -                      | `:ClaudeReview`         | `/review`              |
 | -                      | `:ClaudeContinue`       | `claude -c`            |
 

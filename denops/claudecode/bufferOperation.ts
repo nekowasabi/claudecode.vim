@@ -12,7 +12,6 @@ import { getCurrentFilePath, getPromptFromVimVariable } from "./utils.ts";
 import { AdapterFactory } from "./compatibility/adapterFactory.ts";
 import { EditorDetector } from "./editorDetector.ts";
 import { ClaudeSession } from "./claudeSession.ts";
-import { BackendFactory } from "./backend/backendFactory.ts";
 import { BackendType } from "./backend/claudeBackend.ts";
 
 /**
@@ -140,6 +139,34 @@ export async function openClaudeBuffer(
   denops: Denops,
   openBufferType: BufferLayout,
 ): Promise<void> {
+  // 既存のセッションとBackendを確認
+  const session = ClaudeSession.getInstance(denops);
+  const backend = session.getBackend();
+
+  // 既存のBackendがアクティブな場合
+  if (backend && await backend.isActive()) {
+    const backendType = backend.getType();
+
+    // TmuxBackendの場合は再アタッチ処理
+    if (backendType === BackendType.Tmux) {
+      await backend.show();
+      return;
+    }
+
+    // TerminalBackendの場合は既存のバッファを表示
+    const claudeBuf = await getClaudeBuffer(denops);
+    if (claudeBuf && claudeBuf.bufnr !== -1) {
+      if (openBufferType === "floating") {
+        await openFloatingWindow(denops, claudeBuf.bufnr);
+      } else {
+        await denops.cmd(openBufferType);
+        await denops.cmd(`buffer ${claudeBuf.bufnr}`);
+      }
+      return;
+    }
+  }
+
+  // 既存のBackendがない場合は新規作成
   const claudeBuf = await getClaudeBuffer(denops);
   if (openBufferType === "floating") {
     if (claudeBuf === undefined) {
@@ -157,12 +184,18 @@ export async function openClaudeBuffer(
 
   if (openBufferType === "split" || openBufferType === "vsplit") {
     if (claudeBuf === undefined) {
-      // Backendシステムが環境に応じて適切に処理する
-      const backend = BackendFactory.getCurrent();
-      if (!backend || backend.getType() !== BackendType.Tmux) {
-        // Tmuxバックエンドでない場合のみVimのウィンドウ分割を実行
+      // ClaudeSessionを使用してセッションの状態を確認
+      const isActive = await session.isActive();
+
+      // tmux環境かどうかを確認
+      const tmuxEnv = await denops.call("expand", "$TMUX") as string;
+      const isInTmux = tmuxEnv !== "" && tmuxEnv !== "$TMUX";
+
+      // tmux環境でない場合、または既存のセッションがない場合のみVimの分割を実行
+      if (!isInTmux && !isActive) {
         await denops.cmd(openBufferType);
       }
+
       await claude().run(denops);
     } else {
       // Use the specified buffer type for existing buffers too
@@ -548,7 +581,7 @@ async function openFloatingWindow(
     row: row,
     col: col,
   };
-  const opts:
+  const _opts:
     | typeof optsWithoutStyle
     | (typeof optsWithoutStyle & { style: "minimal" }) =
       floatWinStyle === "minimal"

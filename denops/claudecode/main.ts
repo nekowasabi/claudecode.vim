@@ -132,16 +132,6 @@ export async function main(denops: Denops): Promise<void> {
       { pattern: "[<f-args>]" },
     ),
 
-    await command(
-      "silentSendPromptByCommandline",
-      "1",
-      async (prompt: string) => {
-        await buffer.sendPrompt(denops, prompt, { openBuf: false });
-        console.log(`Sent prompt: ${prompt}`);
-      },
-      { pattern: "[<f-args>]" },
-    ),
-
     await command("run", "0", async () => {
       await buffer.openClaudeBuffer(
         denops,
@@ -187,8 +177,6 @@ export async function main(denops: Denops): Promise<void> {
       }
     }),
 
-    await command("silentRun", "0", () => buffer.silentRun(denops)),
-
     await command("hideVisualSelectFloatingWindow", "0", async () => {
       await buffer.hideVisualSelectFloatingWindow(denops);
     }),
@@ -227,43 +215,6 @@ export async function main(denops: Denops): Promise<void> {
       }
 
       await denops.cmd("silent! e!");
-    }),
-
-    await command(
-      "addFile",
-      "1",
-      async (path: string) => {
-        const prompt = `/add ${path}`;
-
-        await buffer.sendPrompt(denops, prompt);
-      },
-      { pattern: "[<f-args>]", complete: "file" },
-    ),
-
-    await command("addBuffers", "0", async () => {
-      const buffersPath = await buffer.getFileBuffers(denops);
-      const prompt = buffersPath ? `/add ${buffersPath}` : `/add `;
-
-      await buffer.sendPrompt(denops, prompt);
-    }),
-
-    await command("addCurrentFile", "0", async () => {
-      await addFileToClaude(
-        denops,
-        await buffer.getOpenBufferType(denops),
-        "/add",
-      );
-    }),
-
-    await command("silentAddCurrentFile", "0", async () => {
-      await addFileToClaude(
-        denops,
-        await buffer.getOpenBufferType(denops),
-        "/add",
-        { openBuf: false },
-      );
-      const currentFile = await getCurrentFilePath(denops);
-      console.log(`Added ${currentFile} to Claude Code`);
     }),
 
     await command(
