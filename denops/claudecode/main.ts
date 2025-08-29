@@ -2,7 +2,11 @@ import * as fn from "https://deno.land/x/denops_std@v6.5.1/function/mod.ts";
 import type { Denops } from "https://deno.land/x/denops_std@v6.5.1/mod.ts";
 import * as buffer from "./bufferOperation.ts";
 import type { BufferLayout } from "./bufferOperation.ts";
-import { getCurrentFilePath } from "./utils.ts";
+import {
+  getCurrentFilePath,
+  getRegisteredTmuxPaneId,
+  isTmuxPaneActive,
+} from "./utils.ts";
 import { EditorDetector } from "./editorDetector.ts";
 
 /**
@@ -193,6 +197,16 @@ export async function main(denops: Denops): Promise<void> {
     }),
 
     await command("hide", "0", async () => {
+      // tmuxペインが使用されている場合、別ウィンドウにデタッチ
+      if (await isTmuxPaneActive(denops)) {
+        const tmuxPaneId = await getRegisteredTmuxPaneId(denops);
+        if (tmuxPaneId) {
+          // tmuxペインを別ウィンドウにデタッチ（バックグラウンドで実行継続）
+          await denops.call("system", `tmux break-pane -d -s ${tmuxPaneId}`);
+        }
+        return;
+      }
+
       const claudeBuffer = await buffer.getClaudeBuffer(denops);
 
       if (!claudeBuffer) {

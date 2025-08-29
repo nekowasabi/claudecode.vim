@@ -54,6 +54,30 @@ async function run(denops: Denops): Promise<undefined> {
   if (
     (await isInTmux(denops)) && (openType === "split" || openType === "vsplit")
   ) {
+    // 既存のtmuxペインをチェック
+    const existingPaneId = await getRegisteredTmuxPaneId(denops);
+    if (existingPaneId) {
+      // ペインが実際に存在するか確認（全セッションを検索）
+      const checkCmd =
+        `tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -q '^${existingPaneId}$' && echo exists`;
+      const exists =
+        (await denops.call("system", checkCmd) as string).trim() === "exists";
+
+      if (exists) {
+        // 既存のペインを再アタッチ
+        const splitFlag = openType === "vsplit" ? "-h" : "-v";
+        await denops.call(
+          "system",
+          `tmux join-pane ${splitFlag} -s ${existingPaneId}`,
+        );
+        await emit(denops, "User", "ClaudeOpen");
+        return;
+      } else {
+        // ペインが存在しない場合はIDをクリア
+        await clearTmuxPaneId(denops);
+      }
+    }
+
     // tmuxペインでClaude Codeを起動
     const splitFlag = openType === "vsplit" ? "-h" : "-v";
     const shellPath = (await denops.call("expand", "$SHELL")) as
