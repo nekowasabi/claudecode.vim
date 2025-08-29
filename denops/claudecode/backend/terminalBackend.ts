@@ -1,10 +1,6 @@
 import type { Denops } from "https://deno.land/x/denops_std@v6.5.1/mod.ts";
 import { emit } from "https://deno.land/x/denops_std@v6.5.1/autocmd/mod.ts";
-import {
-  BackendConfig,
-  BackendType,
-  BaseBackend,
-} from "./claudeBackend.ts";
+import { BackendConfig, BackendType, BaseBackend } from "./claudeBackend.ts";
 import { AdapterFactory } from "../compatibility/adapterFactory.ts";
 import type { EditorAdapter } from "../compatibility/editorAdapter.ts";
 

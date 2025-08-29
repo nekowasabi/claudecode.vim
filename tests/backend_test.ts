@@ -6,7 +6,7 @@ import {
 // Backend関連のモジュールが正しくロードされるか確認
 Deno.test("Backend modules exist", async () => {
   // claudeBackend.tsのインポート確認
-  const backendModule = await import("./claudeBackend.ts");
+  const backendModule = await import("../denops/claudecode/backend/claudeBackend.ts");
   assertExists(backendModule.BackendType);
   assertExists(backendModule.BaseBackend);
   assertEquals(backendModule.BackendType.Terminal, "terminal");
@@ -14,17 +14,17 @@ Deno.test("Backend modules exist", async () => {
 });
 
 Deno.test("TerminalBackend module exists", async () => {
-  const module = await import("./terminalBackend.ts");
+  const module = await import("../denops/claudecode/backend/terminalBackend.ts");
   assertExists(module.TerminalBackend);
 });
 
 Deno.test("TmuxBackend module exists", async () => {
-  const module = await import("./tmuxBackend.ts");
+  const module = await import("../denops/claudecode/backend/tmuxBackend.ts");
   assertExists(module.TmuxBackend);
 });
 
 Deno.test("BackendFactory module exists", async () => {
-  const module = await import("./backendFactory.ts");
+  const module = await import("../denops/claudecode/backend/backendFactory.ts");
   assertExists(module.BackendFactory);
   assertExists(module.BackendFactory.getOrCreate);
   assertExists(module.BackendFactory.create);
@@ -34,7 +34,7 @@ Deno.test("BackendFactory module exists", async () => {
 
 // ClaudeSessionのテスト
 Deno.test("ClaudeSession module exists", async () => {
-  const module = await import("../claudeSession.ts");
+  const module = await import("../denops/claudecode/claudeSession.ts");
   assertExists(module.ClaudeSession);
   assertExists(module.ClaudeSession.getInstance);
   assertExists(module.ClaudeSession.reset);
