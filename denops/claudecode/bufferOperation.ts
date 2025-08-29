@@ -9,6 +9,7 @@ import {
 } from "https://deno.land/x/unknownutil@v3.18.1/mod.ts";
 import { claude } from "./claudeCommand.ts";
 import {
+  getActiveTmuxPaneId,
   getCurrentFilePath,
   getPromptFromVimVariable,
   isInTmux,
@@ -44,6 +45,17 @@ export async function getOpenBufferType(denops: Denops): Promise<BufferLayout> {
  * @returns {Promise<void>} 処理が完了すると解決されるPromise
  */
 export async function exitClaudeBuffer(denops: Denops): Promise<void> {
+  // tmux環境の場合、まずペインをチェック
+  if (await isInTmux(denops)) {
+    const paneId = await getActiveTmuxPaneId(denops);
+    if (paneId) {
+      // tmuxペインを終了（jobId: -1, bufnr: -1 はtmuxを示す）
+      await claude().exit(denops, -1, -1);
+      return; // tmuxペイン終了後は早期リターン
+    }
+  }
+
+  // 既存のterminalバッファ処理
   const buf_count = ensure(await fn.bufnr(denops, "$"), is.Number);
 
   for (let i = 1; i <= buf_count; i++) {
@@ -223,6 +235,29 @@ export async function sendPrompt(
   input: string,
   opts = { openBuf: true },
 ): Promise<void> {
+  // tmux環境の場合の処理を追加
+  if (await isInTmux(denops)) {
+    const openType = maybe(
+      await v.g.get(denops, "claude_buffer_open_type"),
+      is.LiteralOneOf(["split", "vsplit", "floating"] as const),
+    ) ?? "floating";
+
+    // tmux環境でsplit/vsplitモードの場合
+    if (openType === "split" || openType === "vsplit") {
+      const paneId = await getActiveTmuxPaneId(denops);
+      if (!paneId) {
+        // tmuxペインが存在しない場合のみ起動
+        await denops.cmd("echo 'Claude Code is not running in tmux pane'");
+        await denops.cmd("ClaudeRun");
+        // ペイン作成を待つ
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      // tmux経由でプロンプトを送信（jobId: -1 はtmuxを示す）
+      await claude().sendPrompt(denops, -1, input);
+      return;
+    }
+  }
+
   const claudeBuf = await getClaudeBuffer(denops);
   if (claudeBuf === undefined) {
     await denops.cmd("echo 'Claude Code is not running'");
@@ -614,6 +649,13 @@ async function sendPromptFromSplitWindow(
     return;
   }
 
+  // tmuxペインの場合（jobId: -1）
+  if (claudeBuf.jobId === -1) {
+    // tmux経由でプロンプトを送信
+    await claude().sendPrompt(denops, -1, prompt);
+    return;
+  }
+
   // 現在のバッファがClaude Codeのターミナルバッファかどうかを確認
   const currentBufnr = await fn.bufnr(denops, "%");
   const isCurrentBufferClaudeTerminal = currentBufnr === claudeBuf.bufnr;
@@ -679,6 +721,21 @@ type ClaudeBuffer = {
 export async function getClaudeBuffer(
   denops: Denops,
 ): Promise<ClaudeBuffer | undefined> {
+  // tmux環境の場合、まずペインIDをチェック
+  if (await isInTmux(denops)) {
+    const paneId = await getActiveTmuxPaneId(denops);
+    if (paneId) {
+      // tmuxペインが存在する場合、特別なClaudeBufferを返す
+      // jobId: -1 は tmuxペインを示す特別な値
+      // bufnr: -1 は tmuxペインを示す特別な値
+      return {
+        jobId: -1,
+        winnr: undefined,
+        bufnr: -1,
+      };
+    }
+  }
+
   // Get all open buffer numbers
   const buf_count = ensure(await fn.bufnr(denops, "$"), is.Number);
 
