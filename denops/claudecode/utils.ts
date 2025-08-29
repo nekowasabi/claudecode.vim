@@ -48,3 +48,73 @@ export async function getBufferName(
   const bufname = await fn.bufname(denops, bufnr);
   return ensure(bufname, is.String);
 }
+
+/**
+ * Checks if we are running inside a tmux session
+ * @param {Denops} denops - The Denops instance.
+ * @returns {Promise<boolean>} A promise that resolves to true if inside tmux, false otherwise.
+ */
+export async function isInTmux(denops: Denops): Promise<boolean> {
+  const tmuxEnv = await denops.call("expand", "$TMUX") as string;
+  return tmuxEnv !== "" && tmuxEnv !== "$TMUX";
+}
+
+/**
+ * Gets the registered tmux pane ID from vim global variable
+ * @param {Denops} denops - The Denops instance.
+ * @returns {Promise<string | undefined>} A promise that resolves to the pane ID or undefined.
+ */
+export async function getRegisteredTmuxPaneId(
+  denops: Denops,
+): Promise<string | undefined> {
+  try {
+    const paneId = await v.g.get(denops, "claude_tmux_pane_id");
+    return maybe(paneId, is.String);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Gets the active tmux pane ID if it exists
+ * @param {Denops} denops - The Denops instance.
+ * @returns {Promise<string | undefined>} A promise that resolves to the active pane ID or undefined.
+ */
+export async function getActiveTmuxPaneId(
+  denops: Denops,
+): Promise<string | undefined> {
+  const paneId = await getRegisteredTmuxPaneId(denops);
+  if (!paneId) {
+    return undefined;
+  }
+
+  // Check if the pane actually exists
+  try {
+    const result = await denops.call(
+      "system",
+      `tmux list-panes -F '#{pane_id}' 2>/dev/null | grep -q '^${paneId}$' && echo exists`,
+    ) as string;
+    return result.trim() === "exists" ? paneId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Checks if a tmux pane is active
+ * @param {Denops} denops - The Denops instance.
+ * @returns {Promise<boolean>} A promise that resolves to true if pane is active, false otherwise.
+ */
+export async function isTmuxPaneActive(denops: Denops): Promise<boolean> {
+  const paneId = await getActiveTmuxPaneId(denops);
+  return paneId !== undefined;
+}
+
+/**
+ * Clears the tmux pane ID from vim global variable
+ * @param {Denops} denops - The Denops instance.
+ * @returns {Promise<void>} A promise that resolves when the variable is cleared.
+ */
+export async function clearTmuxPaneId(denops: Denops): Promise<void> {
+  await denops.cmd("silent! unlet g:claude_tmux_pane_id");
+}

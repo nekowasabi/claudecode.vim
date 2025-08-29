@@ -8,7 +8,11 @@ import {
   maybe,
 } from "https://deno.land/x/unknownutil@v3.18.1/mod.ts";
 import { claude } from "./claudeCommand.ts";
-import { getCurrentFilePath, getPromptFromVimVariable } from "./utils.ts";
+import {
+  getCurrentFilePath,
+  getPromptFromVimVariable,
+  isInTmux,
+} from "./utils.ts";
 import { AdapterFactory } from "./compatibility/adapterFactory.ts";
 import { EditorDetector } from "./editorDetector.ts";
 
@@ -162,7 +166,12 @@ export async function openClaudeBuffer(
 
   if (openBufferType === "split" || openBufferType === "vsplit") {
     if (claudeBuf === undefined) {
-      await denops.cmd(openBufferType);
+      // tmux環境の場合はVimのウィンドウ分割をスキップ
+      const inTmux = await isInTmux(denops);
+      if (!inTmux) {
+        // tmux環境でない場合のみVimのウィンドウ分割を実行
+        await denops.cmd(openBufferType);
+      }
       await claude().run(denops);
     } else {
       // Use the specified buffer type for existing buffers too
@@ -288,10 +297,10 @@ export async function openFloatingWindowWithSelectedCode(
       return;
     }
   }
-  
+
   // フルパスを取得
   const currentFilePath = await getCurrentFilePath(denops);
-  
+
   const backupPrompt = await getPromptFromVimVariable(
     denops,
     "claude_visual_select_buffer_prompt",
@@ -377,7 +386,7 @@ async function handleNoBackupPrompt(
     await fn.getbufvar(denops, "%", "&filetype"),
     is.String,
   );
-  
+
   words.unshift("```" + filetype);
   words.splice(1, 0, `@${currentFilePath}`); // フルパスを最初の行に追加
   words.push("```");
@@ -631,16 +640,16 @@ async function sendPromptFromSplitWindow(
       }
     }
   }
-  
+
   // プロンプトを送信
   await claude().sendPrompt(denops, claudeBuf.jobId, prompt);
-  
+
   // Claude Codeの応答を少し待つ
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
   // 最下段に移動してから上方向に「> 」を検索
   await denops.cmd("normal! G");
-  
+
   // 上方向に「> 」を検索し、その後に移動
   try {
     await denops.cmd("normal! ?> ");
@@ -649,7 +658,7 @@ async function sendPromptFromSplitWindow(
     // 「> 」が見つからない場合は行末に移動
     await denops.cmd("normal! $");
   }
-  
+
   // ターミナルモードに入る
   await denops.cmd("startinsert");
 }
