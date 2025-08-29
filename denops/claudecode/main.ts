@@ -2,12 +2,9 @@ import * as fn from "https://deno.land/x/denops_std@v6.5.1/function/mod.ts";
 import type { Denops } from "https://deno.land/x/denops_std@v6.5.1/mod.ts";
 import * as buffer from "./bufferOperation.ts";
 import type { BufferLayout } from "./bufferOperation.ts";
-import {
-  getCurrentFilePath,
-  getRegisteredTmuxPaneId,
-  isTmuxPaneActive,
-} from "./utils.ts";
+import { getCurrentFilePath } from "./utils.ts";
 import { EditorDetector } from "./editorDetector.ts";
+import { ClaudeSession } from "./claudeSession.ts";
 
 /**
  * The main function that sets up the Claude Code plugin functionality.
@@ -197,45 +194,36 @@ export async function main(denops: Denops): Promise<void> {
     }),
 
     await command("hide", "0", async () => {
-      // tmuxペインが使用されている場合、別ウィンドウにデタッチ
-      if (await isTmuxPaneActive(denops)) {
-        const tmuxPaneId = await getRegisteredTmuxPaneId(denops);
-        if (tmuxPaneId) {
-          // tmuxペインを別ウィンドウにデタッチ（バックグラウンドで実行継続）
-          await denops.call("system", `tmux break-pane -d -s ${tmuxPaneId}`);
-        }
-        return;
-      }
+      // ClaudeSessionを使用してセッションを隠す
+      const session = ClaudeSession.getInstance(denops);
+      await session.hide();
 
+      // バッファ情報を取得してフローティングウィンドウの処理
       const claudeBuffer = await buffer.getClaudeBuffer(denops);
+      if (claudeBuffer) {
+        // Claudeバッファがフローティングウィンドウに表示されているかチェック
+        const isFloating = await buffer.isClaudeBufferInFloatingWindow(
+          denops,
+          claudeBuffer.bufnr,
+        );
 
-      if (!claudeBuffer) {
-        // Claudeバッファが存在しない場合は何もしない
-        return;
-      }
-
-      // Claudeバッファがフローティングウィンドウに表示されているかチェック
-      const isFloating = await buffer.isClaudeBufferInFloatingWindow(
-        denops,
-        claudeBuffer.bufnr,
-      );
-
-      if (isFloating) {
-        // フローティングウィンドウの場合は従来の動作
-        const editorType = await EditorDetector.detect(denops);
-        if (editorType === "neovim") {
-          await denops.cmd("fclose!");
-        } else {
-          // Vimの場合はポップアップを閉じる
-          try {
-            await denops.call("popup_clear");
-          } catch {
-            // ポップアップが存在しない場合は無視
+        if (isFloating) {
+          // フローティングウィンドウの場合は従来の動作
+          const editorType = await EditorDetector.detect(denops);
+          if (editorType === "neovim") {
+            await denops.cmd("fclose!");
+          } else {
+            // Vimの場合はポップアップを閉じる
+            try {
+              await denops.call("popup_clear");
+            } catch {
+              // ポップアップが存在しない場合は無視
+            }
           }
+        } else {
+          // 分割ウィンドウの場合はウィンドウのみ閉じる（バッファは保持）
+          await buffer.closeClaudeBuffer(denops, claudeBuffer.bufnr);
         }
-      } else {
-        // 分割ウィンドウの場合はウィンドウのみ閉じる（バッファは保持）
-        await buffer.closeClaudeBuffer(denops, claudeBuffer.bufnr);
       }
 
       await denops.cmd("silent! e!");

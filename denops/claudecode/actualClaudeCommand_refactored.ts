@@ -40,10 +40,10 @@ async function run(denops: Denops): Promise<undefined> {
 
   // Backendを取得または作成
   const backend = await BackendFactory.getOrCreate(denops);
-  
+
   // Claude Codeを起動
   await backend.run(claudeCommand);
-  
+
   return undefined;
 }
 
@@ -64,10 +64,10 @@ async function sendPrompt(
   if (!backend) {
     throw new Error("No active Claude session");
   }
-  
+
   // プロンプトを送信
   await backend.sendPrompt(prompt);
-  
+
   return undefined;
 }
 
@@ -88,13 +88,13 @@ async function exit(
   if (!backend) {
     return undefined;
   }
-  
+
   // セッションを終了
   await backend.exit();
-  
+
   // Backendをリセット
   BackendFactory.reset();
-  
+
   return undefined;
 }
 
