@@ -46,7 +46,7 @@ endfunction
 
 " 使用例:
 " :ClaudeRun
-" :ClaudeAddCurrentFile
+" (File management commands have been removed)
 " :ClaudeSendPromptByCommandline "Please review this code and suggest improvements"
 " :ClaudeReview
 
