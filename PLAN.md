@@ -420,44 +420,53 @@ let g:claude_buffer_open_type = 'floating'
 
 ## 実装タスクリスト
 
-### Phase 1: 基本的なtmuxサポート
-- [ ] **utils.ts** - tmuxヘルパー関数の実装
-  - [ ] utils_test.tsを作成（TDD: Redフェーズ）
-  - [ ] isInTmux関数のテストケース作成
-  - [ ] getRegisteredTmuxPaneId関数のテストケース作成
-  - [ ] getActiveTmuxPaneId関数のテストケース作成
-  - [ ] isTmuxPaneActive関数のテストケース作成
-  - [ ] clearTmuxPaneId関数のテストケース作成
-  - [ ] テスト実行（失敗を確認）
-  - [ ] utils.tsに関数を実装（TDD: Greenフェーズ）
-  - [ ] テスト実行（成功を確認）
-  - [ ] リファクタリング（TDD: Refactorフェーズ）
+### Phase 1: 基本的なtmuxサポート ✅
+- [x] **utils.ts** - tmuxヘルパー関数の実装
+  - [x] utils_test.tsを作成（TDD: Redフェーズ）
+  - [x] isInTmux関数のテストケース作成
+  - [x] getRegisteredTmuxPaneId関数のテストケース作成
+  - [x] getActiveTmuxPaneId関数のテストケース作成
+  - [x] isTmuxPaneActive関数のテストケース作成
+  - [x] clearTmuxPaneId関数のテストケース作成
+  - [x] テスト実行（失敗を確認）
+  - [x] utils.tsに関数を実装（TDD: Greenフェーズ）
+  - [x] テスト実行（成功を確認）
+  - [x] リファクタリング（TDD: Refactorフェーズ）
 
-- [ ] **actualClaudeCommand.ts** - run関数のtmux対応
-  - [ ] actualClaudeCommand_test.tsを作成
-  - [ ] tmux環境でのペイン作成テスト作成
-  - [ ] 非tmux環境でのフォールバックテスト作成
-  - [ ] テスト実行（失敗を確認）
-  - [ ] run関数にtmux分岐を実装
-  - [ ] テスト実行（成功を確認）
-  - [ ] リファクタリング
+- [x] **actualClaudeCommand.ts** - run関数のtmux対応
+  - [x] actualClaudeCommand_test.tsを作成
+  - [x] tmux環境でのペイン作成テスト作成
+  - [x] 非tmux環境でのフォールバックテスト作成
+  - [x] テスト実行（失敗を確認）
+  - [x] run関数にtmux分岐を実装
+  - [x] sendPrompt関数にtmux分岐を実装（Phase 2の内容だが同時実装）
+  - [x] exit関数にtmux分岐を実装（Phase 2の内容だが同時実装）
+  - [x] テスト実行（成功を確認）
+  - [x] リファクタリング
 
-### Phase 2: プロンプト送信とペイン管理
-- [ ] **sendPrompt関数** - tmux対応
-  - [ ] sendPromptのtmuxテスト作成
-  - [ ] 一時ファイル経由の送信テスト作成
-  - [ ] テスト実行（失敗を確認）
-  - [ ] sendPrompt関数にtmux分岐を実装
-  - [ ] テスト実行（成功を確認）
-  - [ ] リファクタリング
+- [x] **bufferOperation.ts** - tmux環境対応（追加実装）
+  - [x] tmux環境でVimウィンドウ分割をスキップする機能を追加
+  - [x] 二重分割問題の修正
 
-- [ ] **exit関数** - tmux対応
-  - [ ] exitのtmuxテスト作成
-  - [ ] ペインkillのテスト作成
-  - [ ] テスト実行（失敗を確認）
-  - [ ] exit関数にtmux分岐を実装
-  - [ ] テスト実行（成功を確認）
-  - [ ] リファクタリング
+### Phase 2: プロンプト送信とペイン管理 ✅
+- [x] **sendPrompt関数** - tmux対応 ✅
+  - [x] sendPromptのtmuxテスト作成（基本テストで実装）
+  - [x] 一時ファイル経由の送信テスト作成（actualClaudeCommand.tsで実装済み）
+  - [x] テスト実行（失敗を確認）
+  - [x] sendPrompt関数にtmux分岐を実装（Phase 1で実装済み）
+  - [x] bufferOperation.tsのsendPrompt関数も修正（tmuxペイン存在チェック追加）
+  - [x] getClaudeBuffer関数をtmux対応に修正
+  - [x] テスト実行（成功を確認）
+  - [x] リファクタリング
+
+- [x] **exit関数** - tmux対応 ✅
+  - [x] exitのtmuxテスト作成（基本テストで実装）
+  - [x] ペインkillのテスト作成（actualClaudeCommand.tsで実装済み）
+  - [x] テスト実行（失敗を確認）
+  - [x] exit関数にtmux分岐を実装（Phase 1で実装済み）
+  - [x] exitClaudeBuffer関数をtmux対応に修正
+  - [x] テスト実行（成功を確認）
+  - [x] リファクタリング
 
 ### Phase 3: 高度な機能
 - [ ] **bufferOperation.ts** - tmuxペイン管理
