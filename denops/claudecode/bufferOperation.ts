@@ -272,7 +272,7 @@ export async function sendPrompt(
 
   // テストモードでは直接コマンドを呼び出して終了
   await claude().sendPrompt(denops, claudeBuf.jobId, input);
-  
+
   // テストモードの場合はここで終了（Backendがない場合）
   if (!session.getBackend()) {
     return;

@@ -6,7 +6,9 @@ import {
 // Backend関連のモジュールが正しくロードされるか確認
 Deno.test("Backend modules exist", async () => {
   // claudeBackend.tsのインポート確認
-  const backendModule = await import("../denops/claudecode/backend/claudeBackend.ts");
+  const backendModule = await import(
+    "../denops/claudecode/backend/claudeBackend.ts"
+  );
   assertExists(backendModule.BackendType);
   assertExists(backendModule.BaseBackend);
   assertEquals(backendModule.BackendType.Terminal, "terminal");
@@ -14,7 +16,9 @@ Deno.test("Backend modules exist", async () => {
 });
 
 Deno.test("TerminalBackend module exists", async () => {
-  const module = await import("../denops/claudecode/backend/terminalBackend.ts");
+  const module = await import(
+    "../denops/claudecode/backend/terminalBackend.ts"
+  );
   assertExists(module.TerminalBackend);
 });
 

@@ -518,9 +518,11 @@ let g:claude_buffer_open_type = 'floating'
 #### アーキテクチャリファクタリング（Strategy/Adapterパターンの導入）
 
 **問題分析:**
+
 - 現在10箇所以上にtmux判定のif文が散在
   - actualClaudeCommand.ts: 3箇所（run, sendPrompt, exit）
-  - bufferOperation.ts: 5箇所（getClaudeBuffer, openClaudeBuffer, sendPrompt, sendPromptFromSplitWindow, exitClaudeBuffer）
+  - bufferOperation.ts: 5箇所（getClaudeBuffer, openClaudeBuffer, sendPrompt,
+    sendPromptFromSplitWindow, exitClaudeBuffer）
   - main.ts: 1箇所（hide）
 - 同じようなパターンの重複コード
 - 保守性とテスタビリティの低下

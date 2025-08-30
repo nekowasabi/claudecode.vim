@@ -182,7 +182,7 @@ export async function main(denops: Denops): Promise<void> {
     }),
 
     await command("hide", "0", async () => {
-      // ClaudeSessionを使用してセッションを隠す
+      // ClaudeSessionのシングルトンインスタンスを取得してセッションを隠す
       const session = ClaudeSession.getInstance(denops);
       await session.hide();
 

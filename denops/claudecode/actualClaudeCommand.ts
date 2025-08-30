@@ -2,7 +2,6 @@ import type { Denops } from "https://deno.land/x/denops_std@v6.5.1/mod.ts";
 import * as v from "https://deno.land/x/denops_std@v6.5.1/variable/mod.ts";
 import { ensure, is } from "https://deno.land/x/unknownutil@v3.18.1/mod.ts";
 import type { ClaudeCommand } from "./claudeCommand.ts";
-import { BackendFactory } from "./backend/backendFactory.ts";
 import { ClaudeSession } from "./claudeSession.ts";
 
 export const commands: ClaudeCommand = {
@@ -34,7 +33,7 @@ async function run(denops: Denops): Promise<undefined> {
     is.String,
   );
 
-  // ClaudeSessionを使用してセッションを開始
+  // ClaudeSessionのシングルトンインスタンスを取得してセッションを開始
   const session = ClaudeSession.getInstance(denops);
   await session.start(claudeCommand);
 
@@ -53,7 +52,7 @@ async function sendPrompt(
   jobId: number,
   prompt: string,
 ): Promise<undefined> {
-  // ClaudeSessionを使用してプロンプトを送信
+  // ClaudeSessionのシングルトンインスタンスを取得してプロンプトを送信
   const session = ClaudeSession.getInstance(denops);
   await session.sendPrompt(prompt);
 
@@ -65,7 +64,7 @@ async function exit(
   jobId: number,
   bufnr: number,
 ): Promise<undefined> {
-  // ClaudeSessionを使用してセッションを終了
+  // ClaudeSessionのシングルトンインスタンスを取得してセッションを終了
   const session = ClaudeSession.getInstance(denops);
   await session.exit();
 

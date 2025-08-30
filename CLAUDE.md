@@ -30,15 +30,13 @@ CLIを統合するVim/Neovimプラグインで、denops.vim（DenoベースのVi
 
 ### コアコンポーネント
 
-1. **Backendアーキテクチャ（Phase 5で導入）**:
-   環境に応じてClaude Codeの実行方法を切り替える抽象化レイヤー：
+1. **統合アーキテクチャ**: 環境に応じてClaude
+   Codeの実行方法を切り替える統一されたシステム：
    - `backend/claudeBackend.ts`: 共通インターフェースとベースクラス定義
    - `backend/terminalBackend.ts`: Vimのターミナルバッファを使用する実装
    - `backend/tmuxBackend.ts`: tmuxペインを使用する実装（tmux環境用）
    - `backend/backendFactory.ts`: 環境を検出し適切なBackendを作成
-   - `claudeSession.ts`: Backendのライフサイクルを管理するシングルトン
-
-   このアーキテクチャにより、tmux判定のif文が削減され、環境差異が抽象化されました。
+   - `claudeSession.ts`: BackendFactoryと統合されたセッション管理
 
 2. **コマンドインターフェースパターン**:
    `claudeCommand.ts`がインターフェースを定義し、本番用に`actualClaudeCommand.ts`、テスト用に`mockClaudeCommand.ts`を実装。`actualClaudeCommand.ts`はClaudeSessionを通じてBackendと連携します。
@@ -63,7 +61,7 @@ CLIを統合するVim/Neovimプラグインで、denops.vim（DenoベースのVi
 
 ### 主要な実装詳細
 
-- **Backend選択ロジック**: 
+- **Backend選択ロジック**:
   - tmux環境 + split/vsplitモード → TmuxBackend（tmuxペイン使用）
   - tmux環境 + floatingモード → TerminalBackend（Vimターミナルバッファ使用）
   - 非tmux環境 → TerminalBackend（すべてのモードでVimターミナルバッファ使用）
@@ -124,7 +122,7 @@ denops/claudecode/
 ├── actualClaudeCommand.ts    # 本番用コマンド実装
 ├── bufferOperation.ts        # バッファ操作
 ├── claudeCommand.ts          # コマンドインターフェース
-├── claudeSession.ts          # セッション管理（Phase 5）
+├── claudeSession.ts          # セッション管理
 ├── editorDetector.ts         # エディタ検出
 ├── main.ts                   # プラグインエントリポイント
 ├── mockClaudeCommand.ts      # テスト用モック実装
