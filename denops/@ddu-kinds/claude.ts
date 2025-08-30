@@ -39,7 +39,9 @@ export const BookmarkAction: Actions<Params> = {
       .join(" ");
 
     if (paths) {
-      await denops.cmd(`ClaudeAddFile ${paths}`);
+      // ClaudeAddFile command has been removed
+      // Users should use other methods to add files
+      await denops.cmd(`echo 'ClaudeAddFile command has been removed'`);
     }
 
     return ActionFlags.None;

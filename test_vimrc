@@ -29,7 +29,6 @@ let g:claude_floatwin_width = 100
 
 " 便利なキーマッピング
 nnoremap <leader>cr :ClaudeRun<CR>
-nnoremap <leader>ca :ClaudeAddCurrentFile<CR>
 nnoremap <leader>cc :ClaudeContinue<CR>
 nnoremap <leader>cv :ClaudeReview<CR>
 nnoremap <leader>ch :ClaudeHide<CR>
@@ -59,7 +58,7 @@ set smartcase
 function! TestClaudeCommands()
   echo "=== Testing Claude Commands ==="
   echo "1. :ClaudeRun - Start Claude Code"
-  echo "2. :ClaudeAddCurrentFile - Add current file"
+  echo "2. (File commands have been removed)"
   echo "3. :ClaudeSendPromptByCommandline 'Hello Claude' - Send prompt"
   echo "4. :ClaudeHide - Hide Claude buffer"
   echo "5. :ClaudeExit - Exit Claude"

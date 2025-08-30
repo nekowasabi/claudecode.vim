@@ -5,23 +5,24 @@ A minimal Vim/Neovim helper plugin for the Claude Code AI coding assistant.
 ## Overview
 
 claudecode.vim integrates Claude Code CLI with Vim/Neovim through denops,
-providing seamless AI-assisted coding capabilities directly within your editor.
+providing seamless AI-assisted coding capabilities directly within the editor.
 
 ## Features
 
-- **Claude Code Integration**: Execute Claude Code commands directly from
-  Vim/Neovim
+- **Claude Code Integration**: Execute Claude Code commands directly from Vim/Neovim
 - **File Context Management**: Add current file or multiple files to Claude Code
   context
-- **Visual Selection Support**: Send selected text as prompts to Claude Code
-- **Floating Window Interface**: Customizable floating windows for interactive
-  operations
-- **Cross-Platform Support**: Works on all platforms supported by denops and
-  Claude Code
-- **Vim/Neovim Compatibility**: Supports both Vim 8.1+ and Neovim with automatic
-  editor detection
-- **Automatic Editor Detection**: Seamless compatibility layer adapts behavior
-  for each editor
+- **Visual Selection Support**: Send selected text as a prompt to Claude
+  Code
+- **Floating Window Interface**: Customizable floating window for
+  interactive operations
+- **tmux Integration**: Native tmux pane support in split/vsplit modes
+- **Cross-platform Support**: Works on all platforms supported by denops
+  and Claude Code
+- **Vim/Neovim Compatibility**: Supports both Vim 8.1+ and Neovim with
+  automatic editor detection
+- **Automatic Editor Detection**:
+  Seamless compatibility layer providing adaptive behavior for each editor
 
 ## Prerequisites
 
@@ -76,6 +77,7 @@ Plug 'nekowasabi/claudecode.vim'
 | `g:claude_floatwin_style`   | String       | `"minimal"`  | Floating window style (Neovim only)                   |
 | `g:claude_floatwin_border`  | String/Array | `"rounded"`  | Floating window border                                |
 | `g:claude_floatwin_blend`   | Number       | `0`          | Floating window transparency (Neovim only)            |
+| `g:claude_tmux_pane_id`     | String       | (internal)   | Stores active tmux pane ID (managed internally)       |
 
 ## Commands
 
@@ -84,22 +86,14 @@ Plug 'nekowasabi/claudecode.vim'
 | Command              | Description                                       |
 | -------------------- | ------------------------------------------------- |
 | `:ClaudeRun`         | Start Claude Code interactive session             |
-| `:ClaudeRunFloating` | Start Claude Code in floating window             |
-| `:ClaudeRunSplit`    | Start Claude Code in horizontal split window     |
-| `:ClaudeRunVsplit`   | Start Claude Code in vertical split window       |
-| `:ClaudeRunToggle`   | Toggle between floating and split window modes   |
+| `:ClaudeRunFloating` | Start Claude Code in floating window              |
+| `:ClaudeRunSplit`    | Start Claude Code in horizontal split window      |
+| `:ClaudeRunVsplit`   | Start Claude Code in vertical split window        |
+| `:ClaudeRunToggle`   | Toggle between floating and split window modes    |
 | `:ClaudeContinue`    | Continue the most recent Claude Code conversation |
 | `:ClaudeReview`      | Request code review from Claude Code              |
 | `:ClaudeHide`        | Hide Claude Code buffer (smart window handling)   |
 | `:ClaudeExit`        | Exit Claude Code session                          |
-
-### File Management
-
-| Command                 | Description                                 |
-| ----------------------- | ------------------------------------------- |
-| `:ClaudeAddCurrentFile` | Add current file to Claude Code context     |
-| `:ClaudeAddFile {path}` | Add specified file to Claude Code context   |
-| `:ClaudeAddBuffers`     | Add all git-tracked open buffers to context |
 
 ### Prompt Commands
 
@@ -108,14 +102,6 @@ Plug 'nekowasabi/claudecode.vim'
 | `:ClaudeSendPromptByCommandline {prompt}` | Send prompt via command line               |
 | `:ClaudeVisualTextWithPrompt`             | Send selected text with interactive prompt |
 | `:ClaudeSendPromptByBuffer`               | Send buffer content as prompt              |
-
-### Silent Commands (Background Operations)
-
-| Command                                         | Description                               |
-| ----------------------------------------------- | ----------------------------------------- |
-| `:ClaudeSilentRun`                              | Start Claude Code without switching focus |
-| `:ClaudeSilentAddCurrentFile`                   | Add current file silently                 |
-| `:ClaudeSilentSendPromptByCommandline {prompt}` | Send prompt silently                      |
 
 ## Usage Examples
 
@@ -132,9 +118,6 @@ Plug 'nekowasabi/claudecode.vim'
 
 " Toggle between floating and split modes
 :ClaudeRunToggle
-
-" Add current file to context
-:ClaudeAddCurrentFile
 
 " Send a prompt
 :ClaudeSendPromptByCommandline "Please explain this function"
@@ -164,7 +147,6 @@ nnoremap <leader>cr :ClaudeRun<CR>
 nnoremap <leader>cf :ClaudeRunFloating<CR>
 nnoremap <leader>cs :ClaudeRunSplit<CR>
 nnoremap <leader>ct :ClaudeRunToggle<CR>
-nnoremap <leader>ca :ClaudeAddCurrentFile<CR>
 nnoremap <leader>cc :ClaudeContinue<CR>
 nnoremap <leader>cv :ClaudeReview<CR>
 nnoremap <leader>ch :ClaudeHide<CR>
@@ -177,13 +159,34 @@ The plugin provides flexible window management options:
 
 #### Display Modes
 
-- **Floating Window** (default): Modern overlay window that doesn't affect your current layout
+- **Floating Window** (default): Modern overlay window that doesn't affect your
+  current layout
 - **Horizontal Split**: Traditional split that divides the window horizontally
 - **Vertical Split**: Traditional split that divides the window vertically
+- **tmux Pane** (when in tmux): Native tmux pane for split/vsplit modes
+
+#### tmux Integration
+
+When running inside tmux with `g:claude_buffer_open_type` set to `split` or
+`vsplit`, the plugin automatically uses tmux panes instead of Vim windows:
+
+- **Automatic Detection**: Detects tmux environment and uses native panes
+- **Pane Persistence**: Claude Code runs in a persistent tmux pane
+- **Hide/Show Support**: `:ClaudeHide` detaches pane, `:ClaudeRun` reattaches
+- **Session Continuity**: Pane remains active even when detached
+- **Cross-Session Support**: Can reattach panes from different tmux windows
+
+**tmux-specific behavior:**
+
+- `:ClaudeRun` creates or reattaches existing tmux pane
+- `:ClaudeHide` detaches pane to background (uses `tmux break-pane`)
+- `:ClaudeExit` kills the tmux pane completely
+- Prompts are sent directly to tmux pane via `tmux send-keys`
 
 #### Smart Window Commands
 
-- **`:ClaudeRunToggle`**: Intelligently switches between floating and split modes
+- **`:ClaudeRunToggle`**: Intelligently switches between floating and split
+  modes
   - If currently floating → switches to horizontal split
   - If currently split → switches to floating
   - If no Claude session exists → starts in floating mode
@@ -192,13 +195,17 @@ The plugin provides flexible window management options:
 
 **`:ClaudeHide`** now provides smart window management:
 
-- **Floating/Popup windows**: Closes the window completely (traditional behavior)
-- **Split windows**: Closes only the window while preserving the terminal process
+- **Floating/Popup windows**: Closes the window completely (traditional
+  behavior)
+- **Split windows (non-tmux)**: Closes only the window while preserving the
+  terminal process
   - Terminal session remains active in background
   - Can be reopened with `:ClaudeRun` to continue the same session
   - Prevents accidental loss of conversation history
+- **tmux panes**: Detaches pane to background, allowing reattachment later
 
-This enhancement allows you to temporarily hide Claude when working in split mode without losing your session progress.
+This enhancement allows you to temporarily hide Claude when working in split
+mode without losing your session progress.
 
 ## How It Works
 
@@ -227,18 +234,22 @@ adapted for Claude Code:
 - Claude Code `/review` command support
 - Conversation continuation with `-c` flag
 - Updated command structure for Claude Code CLI
-- **Multiple window launch modes**: Direct commands for floating, split, and vsplit windows
+- **Multiple window launch modes**: Direct commands for floating, split, and
+  vsplit windows
 - **Smart window toggle**: `:ClaudeRunToggle` to switch between display modes
-- **Enhanced hide behavior**: Smart window management that preserves terminal sessions in split mode
+- **Enhanced hide behavior**: Smart window management that preserves terminal
+  sessions in split mode
+- **tmux integration**: Native tmux pane support for seamless integration in
+  terminal multiplexer environments
 
 ### Command Mapping
 
-| aider.vim              | claudecode.vim          | Claude Code Equivalent |
-| ---------------------- | ----------------------- | ---------------------- |
-| `:AiderRun`            | `:ClaudeRun`            | `claude`               |
-| `:AiderAddCurrentFile` | `:ClaudeAddCurrentFile` | Add file to context    |
-| -                      | `:ClaudeReview`         | `/review`              |
-| -                      | `:ClaudeContinue`       | `claude -c`            |
+| aider.vim              | claudecode.vim    | Claude Code Equivalent |
+| ---------------------- | ----------------- | ---------------------- |
+| `:AiderRun`            | `:ClaudeRun`      | `claude`               |
+| `:AiderAddCurrentFile` | N/A               | Add file to context    |
+| -                      | `:ClaudeReview`   | `/review`              |
+| -                      | `:ClaudeContinue` | `claude -c`            |
 
 ## Troubleshooting
 
@@ -267,6 +278,16 @@ If Claude Code buffer doesn't appear:
 - Check `g:claude_buffer_open_type` setting
 - Try different buffer opening modes (`floating`, `split`, `vsplit`)
 - Note: Floating windows require Neovim or Vim 8.2+ with popup support
+
+### tmux Issues
+
+If tmux integration isn't working:
+
+- Ensure you're running Vim/Neovim inside a tmux session
+- Check that `g:claude_buffer_open_type` is set to `split` or `vsplit`
+- Verify tmux commands are available: `which tmux`
+- If pane doesn't reattach after `:ClaudeHide`, check if it exists with
+  `tmux list-panes -a`
 
 ### Vim Compatibility
 

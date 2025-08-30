@@ -11,6 +11,8 @@ import { claude } from "./claudeCommand.ts";
 import { getCurrentFilePath, getPromptFromVimVariable } from "./utils.ts";
 import { AdapterFactory } from "./compatibility/adapterFactory.ts";
 import { EditorDetector } from "./editorDetector.ts";
+import { ClaudeSession } from "./claudeSession.ts";
+import { BackendType } from "./backend/claudeBackend.ts";
 
 /**
  * Enum representing different buffer layout options.
@@ -40,17 +42,9 @@ export async function getOpenBufferType(denops: Denops): Promise<BufferLayout> {
  * @returns {Promise<void>} 処理が完了すると解決されるPromise
  */
 export async function exitClaudeBuffer(denops: Denops): Promise<void> {
-  const buf_count = ensure(await fn.bufnr(denops, "$"), is.Number);
-
-  for (let i = 1; i <= buf_count; i++) {
-    const bufnr = ensure(await fn.bufnr(denops, i), is.Number);
-
-    if (await claude().checkIfClaudeBuffer(denops, bufnr)) {
-      const adapter = await AdapterFactory.getAdapter(denops);
-      const jobId = await adapter.getTerminalJobId(denops, bufnr);
-      claude().exit(denops, jobId, bufnr);
-    }
-  }
+  // ClaudeSessionを使用してセッションを終了
+  const session = ClaudeSession.getInstance(denops);
+  await session.exit();
 }
 
 /**
@@ -145,6 +139,34 @@ export async function openClaudeBuffer(
   denops: Denops,
   openBufferType: BufferLayout,
 ): Promise<void> {
+  // 既存のセッションとBackendを確認
+  const session = ClaudeSession.getInstance(denops);
+  const backend = session.getBackend();
+
+  // 既存のBackendがアクティブな場合
+  if (backend && await backend.isActive()) {
+    const backendType = backend.getType();
+
+    // TmuxBackendの場合は再アタッチ処理
+    if (backendType === BackendType.Tmux) {
+      await backend.show();
+      return;
+    }
+
+    // TerminalBackendの場合は既存のバッファを表示
+    const claudeBuf = await getClaudeBuffer(denops);
+    if (claudeBuf && claudeBuf.bufnr !== -1) {
+      if (openBufferType === "floating") {
+        await openFloatingWindow(denops, claudeBuf.bufnr);
+      } else {
+        await denops.cmd(openBufferType);
+        await denops.cmd(`buffer ${claudeBuf.bufnr}`);
+      }
+      return;
+    }
+  }
+
+  // 既存のBackendがない場合は新規作成
   const claudeBuf = await getClaudeBuffer(denops);
   if (openBufferType === "floating") {
     if (claudeBuf === undefined) {
@@ -162,7 +184,18 @@ export async function openClaudeBuffer(
 
   if (openBufferType === "split" || openBufferType === "vsplit") {
     if (claudeBuf === undefined) {
-      await denops.cmd(openBufferType);
+      // ClaudeSessionを使用してセッションの状態を確認
+      const isActive = await session.isActive();
+
+      // tmux環境かどうかを確認
+      const tmuxEnv = await denops.call("expand", "$TMUX") as string;
+      const isInTmux = tmuxEnv !== "" && tmuxEnv !== "$TMUX";
+
+      // tmux環境でない場合、または既存のセッションがない場合のみVimの分割を実行
+      if (!isInTmux && !isActive) {
+        await denops.cmd(openBufferType);
+      }
+
       await claude().run(denops);
     } else {
       // Use the specified buffer type for existing buffers too
@@ -214,15 +247,39 @@ export async function sendPrompt(
   input: string,
   opts = { openBuf: true },
 ): Promise<void> {
+  // ClaudeSessionを使用してプロンプトを送信
+  const session = ClaudeSession.getInstance(denops);
+
+  // Backendがある場合はセッションを使用
+  if (session.getBackend()) {
+    if (!await session.isActive()) {
+      await denops.cmd("echo 'Claude Code is not running'");
+      await denops.cmd("ClaudeRun");
+      return;
+    }
+    // プロンプトを送信
+    await session.sendPrompt(input);
+    return;
+  }
+
+  // Backendがない場合（テストモード）は従来の方法で送信
   const claudeBuf = await getClaudeBuffer(denops);
-  if (claudeBuf === undefined) {
+  if (!claudeBuf) {
     await denops.cmd("echo 'Claude Code is not running'");
     await denops.cmd("ClaudeRun");
     return;
   }
 
-  const openBufferType = await getOpenBufferType(denops);
+  // テストモードでは直接コマンドを呼び出して終了
+  await claude().sendPrompt(denops, claudeBuf.jobId, input);
 
+  // テストモードの場合はここで終了（Backendがない場合）
+  if (!session.getBackend()) {
+    return;
+  }
+
+  // 以下は通常モードの処理（実際には到達しない）
+  const openBufferType = await getOpenBufferType(denops);
   if (openBufferType === "floating") {
     if (opts?.openBuf) {
       await openClaudeBuffer(denops, openBufferType);
@@ -288,10 +345,10 @@ export async function openFloatingWindowWithSelectedCode(
       return;
     }
   }
-  
+
   // フルパスを取得
   const currentFilePath = await getCurrentFilePath(denops);
-  
+
   const backupPrompt = await getPromptFromVimVariable(
     denops,
     "claude_visual_select_buffer_prompt",
@@ -377,7 +434,7 @@ async function handleNoBackupPrompt(
     await fn.getbufvar(denops, "%", "&filetype"),
     is.String,
   );
-  
+
   words.unshift("```" + filetype);
   words.splice(1, 0, `@${currentFilePath}`); // フルパスを最初の行に追加
   words.push("```");
@@ -538,7 +595,7 @@ async function openFloatingWindow(
     row: row,
     col: col,
   };
-  const opts:
+  const _opts:
     | typeof optsWithoutStyle
     | (typeof optsWithoutStyle & { style: "minimal" }) =
       floatWinStyle === "minimal"
@@ -605,6 +662,13 @@ async function sendPromptFromSplitWindow(
     return;
   }
 
+  // tmuxペインの場合（jobId: -1）
+  if (claudeBuf.jobId === -1) {
+    // tmux経由でプロンプトを送信
+    await claude().sendPrompt(denops, -1, prompt);
+    return;
+  }
+
   // 現在のバッファがClaude Codeのターミナルバッファかどうかを確認
   const currentBufnr = await fn.bufnr(denops, "%");
   const isCurrentBufferClaudeTerminal = currentBufnr === claudeBuf.bufnr;
@@ -631,16 +695,16 @@ async function sendPromptFromSplitWindow(
       }
     }
   }
-  
+
   // プロンプトを送信
   await claude().sendPrompt(denops, claudeBuf.jobId, prompt);
-  
+
   // Claude Codeの応答を少し待つ
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
   // 最下段に移動してから上方向に「> 」を検索
   await denops.cmd("normal! G");
-  
+
   // 上方向に「> 」を検索し、その後に移動
   try {
     await denops.cmd("normal! ?> ");
@@ -649,7 +713,7 @@ async function sendPromptFromSplitWindow(
     // 「> 」が見つからない場合は行末に移動
     await denops.cmd("normal! $");
   }
-  
+
   // ターミナルモードに入る
   await denops.cmd("startinsert");
 }
@@ -670,9 +734,58 @@ type ClaudeBuffer = {
 export async function getClaudeBuffer(
   denops: Denops,
 ): Promise<ClaudeBuffer | undefined> {
-  // Get all open buffer numbers
-  const buf_count = ensure(await fn.bufnr(denops, "$"), is.Number);
+  // ClaudeSessionを使用して現在のセッションを確認
+  const session = ClaudeSession.getInstance(denops);
+  const backend = session.getBackend();
 
+  if (backend && await backend.isActive()) {
+    const backendType = backend.getType();
+
+    // Tmuxバックエンドの場合
+    if (backendType === BackendType.Tmux) {
+      // tmuxペインが存在する場合、特別なClaudeBufferを返す
+      // jobId: -1 は tmuxペインを示す特別な値
+      // bufnr: -1 は tmuxペインを示す特別な値
+      return {
+        jobId: -1,
+        winnr: undefined,
+        bufnr: -1,
+      };
+    }
+
+    // Terminalバックエンドの場合
+    const identifier = backend.getIdentifier();
+    if (identifier !== undefined && typeof identifier === "number") {
+      // Terminal bufferの場合、実際のbufnrを探す
+      const buf_count = ensure(await fn.bufnr(denops, "$"), is.Number);
+
+      for (let i = 1; i <= buf_count; i++) {
+        const bufnr = ensure(await fn.bufnr(denops, i), is.Number);
+        if (bufnr === -1 || !(await fn.bufloaded(denops, bufnr))) {
+          continue;
+        }
+
+        if (await claude().checkIfClaudeBuffer(denops, bufnr)) {
+          const adapter = await AdapterFactory.getAdapter(denops);
+          const jobId = await adapter.getTerminalJobId(denops, bufnr);
+
+          if (jobId === identifier) {
+            if (await checkBufferOpen(denops, bufnr)) {
+              const winnr = ensure(
+                await fn.bufwinnr(denops, bufnr),
+                is.Number,
+              );
+              return { jobId, winnr, bufnr };
+            }
+            return { jobId, winnr: undefined, bufnr };
+          }
+        }
+      }
+    }
+  }
+
+  // Backendが存在しない場合（テストモードなど）は従来の方法でバッファを検索
+  const buf_count = ensure(await fn.bufnr(denops, "$"), is.Number);
   for (let i = 1; i <= buf_count; i++) {
     const bufnr = ensure(await fn.bufnr(denops, i), is.Number);
     if (bufnr === -1 || !(await fn.bufloaded(denops, bufnr))) {
@@ -680,24 +793,12 @@ export async function getClaudeBuffer(
     }
 
     if (await claude().checkIfClaudeBuffer(denops, bufnr)) {
-      const adapter = await AdapterFactory.getAdapter(denops);
-      const jobId = await adapter.getTerminalJobId(denops, bufnr);
-
-      // testMode時はjobを走らせていないのでその場合は0でも許容
-      // プロセスが動いていない場合(session復元時など)はバッファを削除
-      if (!claude().isTestMode() && jobId === 0) {
-        await denops.cmd(`bd! ${bufnr}`);
-        continue;
-      }
-
+      // バッファが見つかったので返す
       if (await checkBufferOpen(denops, bufnr)) {
-        const winnr = ensure(
-          await fn.bufwinnr(denops, bufnr),
-          is.Number,
-        );
-        return { jobId, winnr, bufnr };
+        const winnr = ensure(await fn.bufwinnr(denops, bufnr), is.Number);
+        return { jobId: -1, winnr, bufnr };
       }
-      return { jobId, winnr: undefined, bufnr };
+      return { jobId: -1, winnr: undefined, bufnr };
     }
   }
 

@@ -41,10 +41,3 @@ export async function getCurrentFilePath(denops: Denops): Promise<string> {
  * @returns {Promise<string>} A promise that resolves to the buffer name.
  * @throws {Error} Throws an error if the buffer name is not a string.
  */
-export async function getBufferName(
-  denops: Denops,
-  bufnr: number,
-): Promise<string> {
-  const bufname = await fn.bufname(denops, bufnr);
-  return ensure(bufname, is.String);
-}
