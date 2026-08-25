@@ -14,8 +14,8 @@ let s:plugin_root = expand('<sfile>:p:h:h')
 let s:denops_path = s:plugin_root . '/denops/claudecode/main.ts'
 
 " denops関数が利用可能か確認
-if !exists('*denops#plugin#register')
-  echomsg 'denops#plugin#register function not found. Please ensure denops.vim is properly loaded.'
+if !exists('*denops#plugin#load')
+  echomsg 'denops#plugin#load function not found. Please ensure denops.vim is properly loaded.'
   finish
 endif
 
@@ -25,4 +25,4 @@ if !filereadable(s:denops_path)
   finish
 endif
 
-call denops#plugin#register('claudecode', s:denops_path)
+call denops#plugin#load('claudecode', s:denops_path)
