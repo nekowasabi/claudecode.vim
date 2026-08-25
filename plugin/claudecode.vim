@@ -9,20 +9,25 @@ if !exists('g:loaded_denops')
   finish
 endif
 
-" claudecodeプラグインを登録
 let s:plugin_root = expand('<sfile>:p:h:h')
 let s:denops_path = s:plugin_root . '/denops/claudecode/main.ts'
 
-" denops関数が利用可能か確認
-if !exists('*denops#plugin#register')
-  echomsg 'denops#plugin#register function not found. Please ensure denops.vim is properly loaded.'
-  finish
-endif
+" denopsの準備が整うまで登録を遅延させる
+augroup claudecode_plugin_internal
+  autocmd!
+  autocmd User DenopsReady call s:register_plugin()
+augroup END
 
-" main.tsファイルが存在するか確認
-if !filereadable(s:denops_path)
-  echomsg 'claudecode main.ts not found at: ' . s:denops_path
-  finish
-endif
+function! s:register_plugin() abort
+  if !exists('*denops#plugin#load')
+    echomsg 'denops#plugin#load function not found. Please ensure denops.vim is properly loaded.'
+    return
+  endif
 
-call denops#plugin#register('claudecode', s:denops_path)
+  if !filereadable(s:denops_path)
+    echomsg 'claudecode main.ts not found at: ' . s:denops_path
+    return
+  endif
+
+  call denops#plugin#load('claudecode', s:denops_path)
+endfunction
